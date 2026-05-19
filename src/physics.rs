@@ -63,9 +63,36 @@ fn sphere_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
     return None;
 }
 
-fn box_intersection_time() -> Option<f32>
+// Finding the trajectory's intersection time to the boundary box
+// Essentially for each dimension k in {x,y,z}, solve:
+//      p_k + t_low*v_k = 0     and     p_k + t_hi*v_k = 0
+// to find the entry and exit time candidates for the dimensions.
+// From here, just compute the range within all the direction for the time the ray being in the cube.
+fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
 {
-    unimplemented!();
+    let mut t_min = f32::NEG_INFINITY;
+    let mut t_max = 1e10_f32;
+
+    for k in (0..3) {
+        let v = vel[k];
+        let p = pos[k];
+
+        if (v.abs() < PHYS_EPSILON)
+        {
+            if (p < 0.0 || p > BOX_SIZE) { return None;}
+            continue;
+        }
+        let (t0, t1) : (f32, f32) = (-p/v, (BOX_SIZE - p)/v);
+        let (lo, hi) =  if t0 < t1 { (t0, t1) } else { (t1, t0) };
+        
+        t_min = f32::max(t_min, lo);
+        t_max = f32::max(t_max, hi);
+        if (t_min > t_max) { return None; }
+    }
+
+    if      (t_min > PHYS_EPSILON) {return Some(t_min);}
+    else if (t_max > PHYS_EPSILON) {return Some(t_max);}
+    return None;
 }
 
 pub fn collision(pos: Vec3, vel: Vec3) -> Option<Vec3>
