@@ -95,7 +95,28 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
     return None;
 }
 
-pub fn collision(pos: Vec3, vel: Vec3) -> Option<Vec3>
+pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
 {
-    unimplemented!();
+    // Normalize the velocity as the intersections depends on it
+    let v = vel.normalize();
+
+    // Compute the intersection times
+    let t_sph : Option<f32> = sphere_intersection_time(pos, v);
+    let t_box : Option<f32> = box_intersection_time(pos, v);
+
+    // Process the intersection times
+    let (t, hit_sphere) : (f32, bool) = match(t_sph, t_box)
+    {
+        (Some(ts), Some(tb)) if (ts < tb)   => (ts, true),
+        (_, Some(tb))                       => (tb, false),
+        (Some(ts), None)                    => (ts, true),
+        _                                   => return None
+    }; if (t < PHYS_EPSILON) {return None;}
+    
+    // Compute the new position and velocity
+    let new_pos : Vec3 = (pos + t*vel);
+    let new_vel : Vec3 = if (hit_sphere) {reflection_sphere(new_pos, v)}
+                        else {reflection_box(new_pos, v)};
+
+    return Some((new_pos, new_vel));
 }
