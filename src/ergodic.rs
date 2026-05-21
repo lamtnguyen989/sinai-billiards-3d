@@ -17,10 +17,29 @@ struct TangentVector
 impl TangentVector
 {
     // Dot product
-    fn dot(self, other: Self) -> f64 {return self.dq.dot(other.dq) + self.dp.dot(other.dp);}
+    fn dot(self, other: Self) -> f64 {
+        return self.dq.dot(other.dq) + self.dp.dot(other.dp);
+    }
 
     // Norm
     fn norm(self) -> f64 {return self.dot(self).sqrt();}
+}
+
+/* Billiards trajectory */
+#[derive(Clone)]
+pub struct Trajectory
+{
+    pub positions:                  Vec<glam::Vec3>,
+    pub velocities:                 Vec<glam::Vec3>,
+    pub current_lyapunov_spectra:   [f64; NUM_TANGENTS],
+}
+
+impl Trajectory
+{
+
+    // Getters for current position and velocities
+    pub fn current_pos(&self) -> Vec3 {return *self.positions.last().unwrap();}
+    pub fn current_vel(&self) -> Vec3 {return *self.velocities.last().unwrap();}
 }
 
 /* Ergodic Statistics */
