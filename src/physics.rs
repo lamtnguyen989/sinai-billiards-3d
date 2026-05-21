@@ -109,7 +109,7 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
     {
         (Some(ts), Some(tb)) if (ts < tb)   => (ts, true),
         (_, Some(tb))                       => (tb, false),
-        (Some(ts), None)                    => (ts, true),
+        (Some(ts), _)                       => (ts, true),
         _                                   => return None
     }; if (t < PHYS_EPSILON) {return None;}
     
