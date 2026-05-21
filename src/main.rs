@@ -8,6 +8,7 @@ use winit::{
 };
 
 mod physics;
+mod ergodic;
 use physics::*;
 
 fn main() {
