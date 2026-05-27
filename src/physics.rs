@@ -36,7 +36,6 @@ fn reflection_box(pos: Vec3, vel: Vec3) -> Vec3
 /***
 *   Collision computations
 ***/
-
 // Solving the intersection time of the trajectory to the sphere via the equation for t
 //      |P + tV|^2 = r^2
 // where: 
@@ -125,7 +124,7 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
 
 
 /***
-    Tangent vector 
+*   Tangent vector 
 ***/
 #[derive(Clone, Copy, Default)]
 struct TangentVector
@@ -136,13 +135,23 @@ struct TangentVector
 
 impl TangentVector
 {
+    // Constructing from array
+    pub fn from_array(arr: [f64; NUM_TANGENTS]) -> Self {
+        return Self {
+            dp : DVec3::new(arr[0], arr[1], arr[2]),
+            dq : DVec3::new(arr[3], arr[4], arr[5])
+        }
+    }
+
     // Dot product
-    fn dot(self, other: Self) -> f64 {
+    pub fn dot(self, other: Self) -> f64 {
         return self.dq.dot(other.dq) + self.dp.dot(other.dp);
     }
 
     // Norm
-    fn norm(self) -> f64 {return self.dot(self).sqrt();}
+    pub fn norm(self) -> f64 {
+        return self.dot(self).sqrt();
+    }
 }
 
 /// Overloading operators for arithmetics ///
@@ -207,21 +216,38 @@ impl std::ops::MulAssign<f64> for TangentVector
 }
 
 /*** 
-    Billiards trajectory 
+*   Billiards trajectory 
 ***/
 #[derive(Clone)]
 pub struct Trajectory
 {
+    // Actual physics and math fields
     pub positions:                  Vec<glam::Vec3>,
     pub velocities:                 Vec<glam::Vec3>,
     pub current_lyapunov_spectra:   [f64; NUM_TANGENTS],
     pub kaplan_yorke_dim:           f64,
+
+    // Extra rendering data
+    pub collision_count:            usize,
+    pub color:                      [f32; 4],   // RGBA values
 }
 
 impl Trajectory
 {
+    // Constructor
+    pub fn new(pos: Vec3, vel: Vec3, color: [f32; 4]) -> Self {
+        return Self {
+            positions:                  vec![pos],
+            velocities:                 vec![vel],
+            current_lyapunov_spectra:   [0.0; NUM_TANGENTS],
+            kaplan_yorke_dim :          0.0,
+            collision_count:            0,
+            color:                      color
+        }
+    }
 
-    // Getters for current position and velocities
+    // Getters
     pub fn current_pos(&self) -> Vec3 {return *self.positions.last().unwrap();}
     pub fn current_vel(&self) -> Vec3 {return *self.velocities.last().unwrap();}
+    pub fn current_spectra(&self) -> &[f64; NUM_TANGENTS] {return &self.current_lyapunov_spectra;}
 }

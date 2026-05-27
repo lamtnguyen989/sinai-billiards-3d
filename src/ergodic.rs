@@ -1,5 +1,3 @@
-
-
 use glam::Vec3;
 use glam::DVec3;
 use crate::physics::*;
