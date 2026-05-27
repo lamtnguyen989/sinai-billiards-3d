@@ -21,7 +21,7 @@ fn reflection_sphere(pos: Vec3, vel: Vec3) -> Vec3
     return reflection;
 }
 
-// Assuming perfect reflection of components direction
+// Box reflection
 fn reflection_box(pos: Vec3, vel: Vec3) -> Vec3
 {
     let mut v = vel;
@@ -59,13 +59,14 @@ fn sphere_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
     let (t1, t2) = (0.5*(-b - discriminant.sqrt()), 0.5*(-b + discriminant.sqrt()));
     if      (t1 > PHYS_EPSILON) { return Some(t1);}
     else if (t2 > PHYS_EPSILON) { return Some(t2);}
-
-    return None;
+    else                        { return None;}
+    
 }
 
 // Finding the trajectory's intersection time to the boundary box
+// The box model is [0, L]^3 where L = BOX_SIZE
 // Essentially for each dimension k in {x,y,z}, solve:
-//      p_k + t_low*v_k = 0     and     p_k + t_hi*v_k = 0
+//      p_k + t_0*v_k = 0     and     p_k + t_L*v_k = 0
 // to find the entry and exit time candidates for the dimensions.
 // From here, just compute the range within all the direction for the time the ray being in the cube.
 fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
@@ -90,9 +91,9 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
         if (t_min > t_max) { return None; }
     }
 
-    if      (t_min > PHYS_EPSILON) {return Some(t_min);}
-    else if (t_max > PHYS_EPSILON) {return Some(t_max);}
-    return None;
+    if      (t_min > PHYS_EPSILON)  { return Some(t_min);}
+    else if (t_max > PHYS_EPSILON)  { return Some(t_max);}
+    else                            { return None;}
 }
 
 pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
@@ -105,13 +106,13 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
     let t_box : Option<f32> = box_intersection_time(pos, v);
 
     // Process the intersection times
-    let (t, hit_sphere) : (f32, bool) = match(t_sph, t_box)
-    {
+    let (t, hit_sphere) : (f32, bool) = match(t_sph, t_box) {
         (Some(ts), Some(tb)) if (ts < tb)   => (ts, true),
         (_, Some(tb))                       => (tb, false),
         (Some(ts), _)                       => (ts, true),
         _                                   => return None
-    }; if (t < PHYS_EPSILON) {return None;}
+    }; 
+    if (t < PHYS_EPSILON) { return None;}
     
     // Compute the new position and velocity
     let new_pos : Vec3 = (pos + t*vel);
