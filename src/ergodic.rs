@@ -1,5 +1,3 @@
-
-
 use glam::Vec3;
 use glam::DVec3;
 use crate::physics::*;
@@ -15,8 +13,12 @@ pub struct ErgodicStats
     pub kaplan_yorke_dim:   f64,
 }
 
-// TODO: Calculate Lyapunov spectra
-
+impl ErgodicStats
+{
+    pub fn compute() {
+        todo!("Implement the computation from the trajectory");
+    }
+}
 
 // Kaplan-Yorke dimension
 // IMPORTANT: This assume we have sorted the spectra (not sorting here since there can be a way to shoehorn the sorting somewhere else)

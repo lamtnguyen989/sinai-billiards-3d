@@ -1847,6 +1847,7 @@ name = "sinai-billiards-3d"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytemuck",
  "egui",
  "env_logger",
  "glam",
