@@ -71,7 +71,7 @@ fn sphere_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
 // From here, just compute the range within all the direction for the time the ray being in the cube.
 fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
 {
-    let mut t_min = f32::NEG_INFINITY;
+    let mut t_min = PHYS_EPSILON;
     let mut t_max = 1e10_f32;
 
     for k in (0..3) {
@@ -87,7 +87,7 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
         let (lo, hi) =  if t0 < t1 { (t0, t1) } else { (t1, t0) };
         
         t_min = f32::max(t_min, lo);
-        t_max = f32::max(t_max, hi);
+        t_max = f32::min(t_max, hi);
         if (t_min > t_max) { return None; }
     }
 
@@ -115,7 +115,7 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
     if (t < PHYS_EPSILON) { return None;}
     
     // Compute the new position and velocity
-    let new_pos : Vec3 = (pos + t*vel);
+    let new_pos : Vec3 = (pos + t*v);
     let new_vel : Vec3 = if (hit_sphere) {reflection_sphere(new_pos, v)}
                         else {reflection_box(new_pos, v)};
 
@@ -218,7 +218,7 @@ impl std::ops::MulAssign<f64> for TangentVector
 /*** 
 *   Billiards trajectory 
 ***/
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Trajectory
 {
     // Actual physics and math fields
@@ -238,7 +238,7 @@ impl Trajectory
     pub fn new(pos: Vec3, vel: Vec3, color: [f32; 4]) -> Self {
         return Self {
             positions:                  vec![pos],
-            velocities:                 vec![vel],
+            velocities:                 vec![vel.normalize()],
             current_lyapunov_spectra:   [0.0; NUM_TANGENTS],
             kaplan_yorke_dim :          0.0,
             collision_count:            0,
@@ -250,4 +250,5 @@ impl Trajectory
     pub fn current_pos(&self) -> Vec3 {return *self.positions.last().unwrap();}
     pub fn current_vel(&self) -> Vec3 {return *self.velocities.last().unwrap();}
     pub fn current_spectra(&self) -> &[f64; NUM_TANGENTS] {return &self.current_lyapunov_spectra;}
+    pub fn current_lya_time(&self) -> f64 {return 1.0/self.current_lyapunov_spectra[0];}    // Ehh assume sorted spectra
 }
