@@ -135,19 +135,32 @@ fn phase_tangent_free_flight(p: TangentPhaseVector, t: f64) -> TangentPhaseVecto
 }
 
 // Wall reflection just basically reflect both position and momentum through the normal
-fn phase_tangent_wall_reflect(p: TangentPhaseVector, n: DVec3) -> TangentPhaseVector 
+fn phase_tangent_wall_reflect(tpv: TangentPhaseVector, n: DVec3) -> TangentPhaseVector 
 {
-    let p_position = p.get_position_tangent();
-    let p_momentum = p.get_momentum_tangent();
+    let tpv_position: DVec3 = tpv.get_position_tangent();
+    let tpv_momentum: DVec3 = tpv.get_momentum_tangent();
 
-    let tangent_pos_reflection: DVec3 = p_position - (2.0 * p_position.dot(n))*n;
-    let tangent_mom_reflection: DVec3 = p_momentum - (2.0 * p_momentum.dot(n))*n;
+    let tangent_pos_reflection: DVec3 = tpv_position - (2.0 * tpv_position.dot(n))*n;
+    let tangent_mom_reflection: DVec3 = tpv_momentum - (2.0 * tpv_momentum.dot(n))*n;
     return TangentPhaseVector::new(tangent_pos_reflection, tangent_mom_reflection);
 }
 
-fn phase_tangent_sphere_reflect(p: TangentPhaseVector, n: DVec3) -> TangentPhaseVector 
+// Sphere reflection perturbation
+// TODO: Explain the mathematical mess of the derivation
+fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, mom_in: DVec3, n: DVec3, r: f64) -> TangentPhaseVector 
 {
-    todo!("Implement how both the position and momentum is perturbed after hitting the sphere");
+    let tpv_position: DVec3 = tpv.get_position_tangent();
+    let tpv_momentum: DVec3 = tpv.get_momentum_tangent();
+
+    let pos_reflection: DVec3 = tpv_position - (2.0 * tpv_position.dot(n))*n;  
+    let mom_reflection: DVec3 = tpv_momentum - (2.0 * tpv_momentum.dot(n))*n;
+
+    let sphere_correction =   (mom_in.dot(n)*tpv_position) 
+                            - (tpv_position.dot(n))*mom_in 
+                            + (mom_in.dot(tpv_position)*n)
+                            - (mom_in.dot(mom_in) / mom_in.dot(n)) * (tpv_position.dot(n)) * n;
+
+    return TangentPhaseVector::new(pos_reflection, mom_reflection - 2.0/r*sphere_correction);
 }
 
 
