@@ -124,28 +124,28 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
 
 
 /***
-*   Phase point or phase space element, cotangent bundle but not really :)
+*   Tangent vector in the phase space (linear perturbation of a trajectory point in phase space)
 ***/
 #[derive(Clone, Copy, Default)]
-pub struct PhasePoint
+pub struct TangentPhaseVector
 {
-    position: DVec3,
-    momentum: DVec3,
+    d_position: DVec3,  // Position tangent
+    d_momentum: DVec3,  // Momentum tangent
 }
 
-impl PhasePoint
+impl TangentPhaseVector
 {
     // Constructing from array
     pub fn from_array(arr: [f64; NUM_TANGENTS]) -> Self {
         return Self {
-            position: DVec3::new(arr[0], arr[1], arr[2]),
-            momentum: DVec3::new(arr[3], arr[4], arr[5])
+            d_position  : DVec3::new(arr[0], arr[1], arr[2]),
+            d_momentum : DVec3::new(arr[3], arr[4], arr[5])
         }
     }
 
     // Dot product
     pub fn dot(self, other: Self) -> f64 {
-        return self.position.dot(other.position) + self.momentum.dot(other.momentum);
+        return self.d_momentum.dot(other.d_momentum) + self.d_position .dot(other.d_position );
     }
 
     // Norm
@@ -154,91 +154,102 @@ impl PhasePoint
     }
 
     // Getters
-    pub fn get_position(self) -> DVec3 {return self.position;}
-    pub fn get_momentum(self) -> DVec3 {return self.momentum;}
+    pub fn get_position_tangent(self) -> DVec3 {return self.d_position;}
+    pub fn get_momentum_tangent(self) -> DVec3 {return self.d_momentum;}
 }
 
 /// Overloading operators for arithmetics ///
 // Addition 
-impl std::ops::Add for PhasePoint 
+impl std::ops::Add for TangentPhaseVector 
 {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         return Self {
-            position: self.position + other.position,
-            momentum: self.momentum + other.momentum
+            d_position: self.d_position  + other.d_position,
+            d_momentum: self.d_momentum + other.d_momentum
         }
     }
 }
 
-impl std::ops::AddAssign for PhasePoint
+impl std::ops::AddAssign for TangentPhaseVector
 {
     fn add_assign(&mut self, other: Self) {
-        self.position += other.position;
-        self.momentum += other.momentum;
+        self.d_position += other.d_position;
+        self.d_momentum += other.d_momentum;
     }
 }
 
 // Subtraction
-impl std::ops::Sub for PhasePoint
+impl std::ops::Sub for TangentPhaseVector
 {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
         return Self {
-            position: self.position - other.position,
-            momentum: self.momentum - other.momentum
+            d_position: self.d_position - other.d_position,
+            d_momentum: self.d_momentum - other.d_momentum
         }
     }
 }
 
-impl std::ops::SubAssign for PhasePoint
+impl std::ops::SubAssign for TangentPhaseVector
 {
     fn sub_assign(&mut self, other: Self) {
-        self.position -= other.position;
-        self.momentum -= other.momentum;
+        self.d_position -= other.d_position;
+        self.d_momentum -= other.d_momentum;
     }
 }
 
 // Scalar multiplication
-impl std::ops::Mul<f64> for PhasePoint
+impl std::ops::Mul<f64> for TangentPhaseVector
 {
     type Output = Self;
     fn mul(self, a: f64) -> Self {
         return Self {
-            position: a*self.position,
-            momentum: a*self.momentum
+            d_position: a * self.d_position,
+            d_momentum: a * self.d_momentum
         }
     }
 }
 
-impl std::ops::MulAssign<f64> for PhasePoint
+impl std::ops::MulAssign<f64> for TangentPhaseVector
 {
     fn mul_assign(&mut self, a: f64) {
-        self.position *= a;
-        self.momentum *= a;
+        self.d_position *= a;
+        self.d_momentum *= a;
     }
 }
 
-/// Phase space physics ///
-// Free flight
-fn phase_point_free_flight(p: PhasePoint, t: f64) -> PhasePoint 
+impl std::ops::Mul<TangentPhaseVector> for f64
 {
-    return PhasePoint {
-        position: p.position,
-        momentum: p.momentum + t*p.position
+    type Output = TangentPhaseVector;
+    fn mul(self, v: TangentPhaseVector) -> TangentPhaseVector {
+        return TangentPhaseVector{
+            d_position: v.get_position_tangent()*self,
+            d_momentum: v.get_momentum_tangent()*self
+        }
+    }
+}
+
+/// Phase space perturbation physics ///
+// Free flight 
+fn phase_tangent_free_flight(p: TangentPhaseVector, t: f64) -> TangentPhaseVector 
+{
+    return TangentPhaseVector {
+        d_position: p.d_position,
+        d_momentum: p.d_momentum + t*p.d_position
     }
 }
 
 // Wall reflection just basically reflect both position and momentum through the normal
-fn phase_point_wall_reflect(p: PhasePoint, n: DVec3) -> PhasePoint 
+fn phase_tangent_wall_reflect(p: TangentPhaseVector, n: DVec3) -> TangentPhaseVector 
 {
-    return PhasePoint {
-        position: p.position - (2.0 * p.position.dot(n))*n,
-        momentum: p.momentum - (2.0 * p.momentum.dot(n))*n
+    return TangentPhaseVector {
+        d_position: p.d_position - (2.0 * p.d_position.dot(n))*n,
+        d_momentum: p.d_momentum - (2.0 * p.d_momentum.dot(n))*n
     }
 }
 
-fn phase_point_sphere_reflect(p: PhasePoint, n: DVec3) -> PhasePoint 
+fn phase_tangent_sphere_reflect(p: TangentPhaseVector, n: DVec3) -> TangentPhaseVector 
 {
     todo!("Implement how both the position and momentum is perturbed after hitting the sphere");
 }
