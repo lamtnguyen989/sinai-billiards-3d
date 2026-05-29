@@ -235,8 +235,8 @@ impl std::ops::Mul<TangentPhaseVector> for f64
 fn phase_tangent_free_flight(p: TangentPhaseVector, t: f64) -> TangentPhaseVector 
 {
     return TangentPhaseVector {
-        d_position: p.d_position,
-        d_momentum: p.d_momentum + t*p.d_position
+        d_position: p.d_position + t*d_momentum,
+        d_momentum: p.d_momentum
     }
 }
 
