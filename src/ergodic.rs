@@ -22,8 +22,8 @@ impl ErgodicStats
 
 // Kaplan-Yorke dimension
 // IMPORTANT: This assume we have sorted the spectra (not sorting here since there can be a way to shoehorn the sorting somewhere else)
-// Also this is most likely zero for this billiards model although it is worth it to give it a proper treatment
-fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
+// Also this is most likely integer-valued for this billiards model although it is worth it to give it a proper treatment
+pub fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
 {
     let mut sum: f64 = 0.0;
     let mut positive_count: usize = 0;
