@@ -1,4 +1,5 @@
 use billiards_logic::physics::*;
+use billiards_logic::tangent::*;
 use glam::DVec3;
 use glam::Vec3;
 

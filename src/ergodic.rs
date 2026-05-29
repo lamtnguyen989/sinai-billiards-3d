@@ -1,5 +1,6 @@
 use glam::Vec3;
 use glam::DVec3;
+use crate::tangent::*;
 use crate::physics::*;
 
 /* Constants */
