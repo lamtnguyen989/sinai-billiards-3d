@@ -1,3 +1,4 @@
+mod tangent;
 mod physics;
 mod ergodic;
 
@@ -10,6 +11,7 @@ use winit::{
     window::Window
 };
 
+use tangent::*;
 use physics::*;
 use ergodic::*;
 
