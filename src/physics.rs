@@ -124,96 +124,125 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
 
 
 /***
-*   Tangent vector 
+*   Phase point or phase space element, cotangent bundle but not really :)
 ***/
 #[derive(Clone, Copy, Default)]
-struct TangentVector
+pub struct PhasePoint
 {
-    dp: DVec3,  // Position tangent
-    dq: DVec3,  // Momentum tangent
+    position: DVec3,
+    momentum: DVec3,
 }
 
-impl TangentVector
+impl PhasePoint
 {
     // Constructing from array
     pub fn from_array(arr: [f64; NUM_TANGENTS]) -> Self {
         return Self {
-            dp : DVec3::new(arr[0], arr[1], arr[2]),
-            dq : DVec3::new(arr[3], arr[4], arr[5])
+            position: DVec3::new(arr[0], arr[1], arr[2]),
+            momentum: DVec3::new(arr[3], arr[4], arr[5])
         }
     }
 
     // Dot product
     pub fn dot(self, other: Self) -> f64 {
-        return self.dq.dot(other.dq) + self.dp.dot(other.dp);
+        return self.position.dot(other.position) + self.momentum.dot(other.momentum);
     }
 
     // Norm
     pub fn norm(self) -> f64 {
         return self.dot(self).sqrt();
     }
+
+    // Getters
+    pub fn get_position(self) -> DVec3 {return self.position;}
+    pub fn get_momentum(self) -> DVec3 {return self.momentum;}
 }
 
 /// Overloading operators for arithmetics ///
 // Addition 
-impl std::ops::Add for TangentVector 
+impl std::ops::Add for PhasePoint 
 {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         return Self {
-            dp: self.dp + other.dp,
-            dq: self.dq + other.dq
+            position: self.position + other.position,
+            momentum: self.momentum + other.momentum
         }
     }
 }
 
-impl std::ops::AddAssign for TangentVector
+impl std::ops::AddAssign for PhasePoint
 {
     fn add_assign(&mut self, other: Self) {
-        self.dp += other.dp;
-        self.dq += other.dq;
+        self.position += other.position;
+        self.momentum += other.momentum;
     }
 }
 
 // Subtraction
-impl std::ops::Sub for TangentVector
+impl std::ops::Sub for PhasePoint
 {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
         return Self {
-            dp: self.dp - other.dp,
-            dq: self.dq - other.dq
+            position: self.position - other.position,
+            momentum: self.momentum - other.momentum
         }
     }
 }
 
-impl std::ops::SubAssign for TangentVector
+impl std::ops::SubAssign for PhasePoint
 {
     fn sub_assign(&mut self, other: Self) {
-        self.dp -= other.dp;
-        self.dq -= other.dq;
+        self.position -= other.position;
+        self.momentum -= other.momentum;
     }
 }
 
 // Scalar multiplication
-impl std::ops::Mul<f64> for TangentVector
+impl std::ops::Mul<f64> for PhasePoint
 {
     type Output = Self;
     fn mul(self, a: f64) -> Self {
         return Self {
-            dp : a * self.dp,
-            dq : a * self.dq
+            position: a*self.position,
+            momentum: a*self.momentum
         }
     }
 }
 
-impl std::ops::MulAssign<f64> for TangentVector
+impl std::ops::MulAssign<f64> for PhasePoint
 {
     fn mul_assign(&mut self, a: f64) {
-        self.dp *= a;
-        self.dq *= a;
+        self.position *= a;
+        self.momentum *= a;
     }
 }
+
+/// Phase space physics ///
+// Free flight
+fn phase_point_free_flight(p: PhasePoint, t: f64) -> PhasePoint 
+{
+    return PhasePoint {
+        position: p.position,
+        momentum: p.momentum + t*p.position
+    }
+}
+
+// Wall reflection just basically reflect both position and momentum through the normal
+fn phase_point_wall_reflect(p: PhasePoint, n: DVec3) -> PhasePoint 
+{
+    return PhasePoint {
+        position: p.position - (2.0 * p.position.dot(n))*n,
+        momentum: p.momentum - (2.0 * p.momentum.dot(n))*n
+    }
+}
+
+fn phase_point_sphere_reflect(p: PhasePoint, n: DVec3) -> PhasePoint 
+{
+    todo!("Implement how both the position and momentum is perturbed after hitting the sphere");
+}
+
 
 /*** 
 *   Billiards trajectory 

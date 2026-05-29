@@ -1,3 +1,6 @@
+mod physics;
+mod ergodic;
+
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler, 
@@ -7,9 +10,8 @@ use winit::{
     window::Window
 };
 
-mod physics;
-mod ergodic;
 use physics::*;
+use ergodic::*;
 
 fn main() {
     env_logger::init();
