@@ -1,5 +1,4 @@
-use glam::Vec3;
-use glam::DVec3;
+use glam::{Vec3, DVec3};
 use crate::tangent::*;
 use crate::physics::*;
 
@@ -16,7 +15,7 @@ pub struct ErgodicStats
 
 impl ErgodicStats
 {
-    pub fn compute() {
+    pub fn compute(traj: Trajectory) {
         todo!("Implement the computation from the trajectory");
     }
 }

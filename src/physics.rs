@@ -1,6 +1,10 @@
 use rand::Rng;
 use glam::{Vec3, DVec3};
+use nalgebra::{Matrix6, U6};
+
 use crate::tangent::{NUM_TANGENTS, TangentPhaseVector};
+
+/// Note the model assume unit mass so velocities and momenta are interchangable
 
 /*** 
 *   Geometry constants
@@ -147,7 +151,7 @@ fn phase_tangent_wall_reflect(tpv: TangentPhaseVector, n: DVec3) -> TangentPhase
 
 // Sphere reflection perturbation
 // TODO: Explain the mathematical mess of the derivation
-fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, mom_in: DVec3, n: DVec3, r: f64) -> TangentPhaseVector 
+fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n: DVec3, r: f64) -> TangentPhaseVector 
 {
     let tpv_position: DVec3 = tpv.get_position_tangent();
     let tpv_momentum: DVec3 = tpv.get_momentum_tangent();
@@ -155,10 +159,10 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, mom_in: DVec3, n: DVec3
     let pos_reflection: DVec3 = tpv_position - (2.0 * tpv_position.dot(n))*n;  
     let mom_reflection: DVec3 = tpv_momentum - (2.0 * tpv_momentum.dot(n))*n;
 
-    let sphere_correction =   (mom_in.dot(n)*tpv_position) 
-                            - (tpv_position.dot(n))*mom_in 
-                            + (mom_in.dot(tpv_position)*n)
-                            - (mom_in.dot(mom_in) / mom_in.dot(n)) * (tpv_position.dot(n)) * n;
+    let sphere_correction =   (curr_momentum.dot(n)*tpv_position) 
+                            - (tpv_position.dot(n))*curr_momentum 
+                            + (curr_momentum.dot(tpv_position)*n)
+                            - (curr_momentum.dot(curr_momentum) / curr_momentum.dot(n)) * (tpv_position.dot(n)) * n;
 
     return TangentPhaseVector::new(pos_reflection, mom_reflection - 2.0/r*sphere_correction);
 }
@@ -171,14 +175,13 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, mom_in: DVec3, n: DVec3
 pub struct Trajectory
 {
     // Actual physics and math fields
-    pub positions:                  Vec<glam::Vec3>,
-    pub velocities:                 Vec<glam::Vec3>,
-    pub current_lyapunov_spectra:   [f64; NUM_TANGENTS],
-    pub kaplan_yorke_dim:           f64,
+    positions:              Vec<glam::Vec3>,
+    velocities:             Vec<glam::Vec3>,
+    lyapunov_spectra:       LyapunovSpectra,
 
     // Extra rendering data
-    pub collision_count:            usize,
-    pub color:                      [f32; 4],   // RGBA values
+    pub collision_count:    usize,
+    pub color:              [f32; 4],   // RGBA values
 }
 
 impl Trajectory
@@ -188,8 +191,7 @@ impl Trajectory
         return Self {
             positions:                  vec![pos],
             velocities:                 vec![vel.normalize()],
-            current_lyapunov_spectra:   [0.0; NUM_TANGENTS],
-            kaplan_yorke_dim :          0.0,
+            lyapunov_spectra:           LyapunovSpectra::default(),
             collision_count:            0,
             color:                      color
         }
@@ -198,6 +200,43 @@ impl Trajectory
     // Getters
     pub fn current_pos(&self) -> Vec3 {return *self.positions.last().unwrap();}
     pub fn current_vel(&self) -> Vec3 {return *self.velocities.last().unwrap();}
-    pub fn current_spectra(&self) -> &[f64; NUM_TANGENTS] {return &self.current_lyapunov_spectra;}
-    pub fn current_lya_time(&self) -> f64 {return 1.0/self.current_lyapunov_spectra[0];}    // Ehh assume sorted spectra
+    pub fn curr_lya_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra.spectrum;}
+}
+
+
+fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
+{
+    // Take QR-decomposition of the frame
+    let frame_qr_decomp: nalgebra::QR<f64, U6, U6> = frame.qr();
+
+    // Update the frame as the Q-matrix
+    *frame = frame_qr_decomp.q();
+
+    // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix
+    let R: Matrix6<f64> = frame_qr_decomp.r();
+    let increments = std::array::from_fn(|k| {f64::ln(R[(k,k)].abs().max(1e-16))});
+    assert_eq!(increments.len(), NUM_TANGENTS);
+
+    return increments;
+}
+
+// Trajectory Lyapunov spectra computation handler
+#[derive(Clone, Default)]
+struct LyapunovSpectra
+{
+    frame   : Matrix6<f64>,
+    spectrum: [f64; NUM_TANGENTS]
+}
+
+impl LyapunovSpectra
+{
+    // Constructor
+    pub fn new() -> Self {
+        todo!("Compute the Lyapunov Spectra via perturbation Linear Algebra");
+    }
+
+    // Compute Lyapunov spectrum 
+    pub fn compute_spectrum() {
+        todo!("Still need to implement the full spectrum calculations");
+    }
 }
