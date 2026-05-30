@@ -159,10 +159,10 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n
     let pos_reflection: DVec3 = tpv_position - (2.0 * tpv_position.dot(n))*n;  
     let mom_reflection: DVec3 = tpv_momentum - (2.0 * tpv_momentum.dot(n))*n;
 
-    let sphere_correction =   (curr_momentum.dot(n)*tpv_position) 
-                            - (tpv_position.dot(n))*curr_momentum 
-                            + (curr_momentum.dot(tpv_position)*n)
-                            - (curr_momentum.dot(curr_momentum) / curr_momentum.dot(n)) * (tpv_position.dot(n)) * n;
+    let sphere_correction:DVec3 =  curr_momentum.dot(n) * tpv_position 
+                                - tpv_position.dot(n) * curr_momentum 
+                                + curr_momentum.dot(tpv_position) * n
+                                - (curr_momentum.dot(curr_momentum) / curr_momentum.dot(n)) * (tpv_position.dot(n)) * n;
 
     return TangentPhaseVector::new(pos_reflection, mom_reflection - 2.0/r*sphere_correction);
 }
@@ -215,7 +215,6 @@ fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
     // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix
     let R: Matrix6<f64> = frame_qr_decomp.r();
     let increments = std::array::from_fn(|k| {f64::ln(R[(k,k)].abs().max(1e-16))});
-    assert_eq!(increments.len(), NUM_TANGENTS);
 
     return increments;
 }

@@ -8,16 +8,35 @@ use crate::physics::*;
 #[derive(Default, Clone)]
 pub struct ErgodicStats
 {
-    pub lyapunov_spectra:   [f64; NUM_TANGENTS],
-    pub ks_entropy:         f64,
-    pub kaplan_yorke_dim:   f64,
+    lyapunov_spectra:   [f64; NUM_TANGENTS],
+    ks_entropy:         f64,
+    kaplan_yorke_dim:   f64,
 }
 
 impl ErgodicStats
 {
-    pub fn compute(traj: Trajectory) {
-        todo!("Implement the computation from the trajectory");
+    // Compute ergodic quantities from the trajectory
+    pub fn compute(traj: &Trajectory) -> Self {
+
+        // Get and sort the Lyapunov spectra
+        let mut spectra: [f64; NUM_TANGENTS] = traj.curr_lya_spectra();
+        spectra.sort_by(|a,b| {b.partial_cmp(a).unwrap()});
+
+        // Compute statistics
+        let ks_entropy = spectra.iter().map(|&x| {x.max(0.0)}).sum();
+        let ky_dim = kaplan_yorke_dim(&spectra);
+
+        return Self {
+            lyapunov_spectra:   spectra,
+            ks_entropy:         ks_entropy,
+            kaplan_yorke_dim:   ky_dim
+        }
     }
+
+    // Getters
+    pub fn get_lyapunov_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra;}
+    pub fn get_ks_entropy(&self) -> f64 {return self.ks_entropy;}
+    pub fn get_ky_dim(&self) -> f64 {return self.kaplan_yorke_dim;}
 }
 
 // Kaplan-Yorke dimension
