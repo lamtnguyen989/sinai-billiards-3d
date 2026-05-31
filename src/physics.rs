@@ -254,33 +254,6 @@ fn wall_normal(pos: Vec3) -> Option<DVec3> {
     }
 }
 
-
-fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
-{
-    // Take QR-decomposition of the frame
-    let frame_qr_decomp: nalgebra::QR<f64, U6, U6> = frame.qr();
-
-    // Update the frame as the Q-matrix
-    *frame = frame_qr_decomp.q();
-
-    // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix
-    let R: Matrix6<f64> = frame_qr_decomp.r();
-    let increments = std::array::from_fn(|k| {f64::ln(R[(k,k)].abs().max(1e-16))});
-
-    return increments;
-}
-
-
-fn compute_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPhaseVector) -> TangentPhaseVector) -> ()
-{
-    // Compute the phase frame column-by-column
-    for col in 0..NUM_TANGENTS {
-        let curr_column_values: [f64; NUM_TANGENTS] = std::array::from_fn(|k| frame[(k, col)]);
-        let updated_column_values: [f64; NUM_TANGENTS] = compute_type(TangentPhaseVector::from_array(curr_column_values)).as_array();
-        for k in 0..NUM_TANGENTS {frame[(k, col)] = updated_column_values[k];}
-    }
-}
-
 // Trajectory Lyapunov spectra computation handler
 #[derive(Clone)]
 struct LyapunovSpectra<const N: usize>
@@ -338,5 +311,31 @@ impl TrajectoryPhaseLyapunovSpectra
         let increments: [f64; NUM_TANGENTS] = compute_lya_increments(&mut self.frame);
         self.spectrum.iter_mut().zip(increments)
                     .for_each(|(lya_exp, increment)| {*lya_exp += (increment - *lya_exp) / total_time;});
+    }
+}
+
+fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
+{
+    // Take QR-decomposition of the frame
+    let frame_qr_decomp: nalgebra::QR<f64, U6, U6> = frame.qr();
+
+    // Update the frame as the Q-matrix
+    *frame = frame_qr_decomp.q();
+
+    // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix
+    let R: Matrix6<f64> = frame_qr_decomp.r();
+    let increments = std::array::from_fn(|k| {f64::ln(R[(k,k)].abs().max(1e-16))});
+
+    return increments;
+}
+
+
+fn compute_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPhaseVector) -> TangentPhaseVector) -> ()
+{
+    // Compute the phase frame column-by-column
+    for col in 0..NUM_TANGENTS {
+        let curr_column_values: [f64; NUM_TANGENTS] = std::array::from_fn(|k| frame[(k, col)]);
+        let updated_column_values: [f64; NUM_TANGENTS] = compute_type(TangentPhaseVector::from_array(curr_column_values)).as_array();
+        for k in 0..NUM_TANGENTS {frame[(k, col)] = updated_column_values[k];}
     }
 }
