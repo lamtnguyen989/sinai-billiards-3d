@@ -1,22 +1,48 @@
-use glam::{Vec3, DVec3};
 use crate::tangent::*;
 use crate::physics::*;
 
-/* Constants */
 
 /* Ergodic Statistics */
-#[derive(Default, Clone)]
-pub struct ErgodicStats
+// Need to make generic version of Ergodic Stat based on Lyapunov spectra length purely for testing
+#[derive(Clone)]
+pub struct ErgodicStatistics<const N: usize>
 {
-    lyapunov_spectra:   [f64; NUM_TANGENTS],
+    lyapunov_spectra:   [f64; N],
     ks_entropy:         f64,
     kaplan_yorke_dim:   f64,
 }
 
+impl<const N: usize> ErgodicStatistics<N>
+{
+    pub fn new(lya_spectra: &[f64; N]) -> Self {
+        // Make a mutable copy of the specta and sort it
+        let mut spectra = *lya_spectra;
+        spectra.sort_by(|a,b| {b.partial_cmp(a).unwrap()});
+
+        // Compute statistics
+        let ks_entropy = spectra.iter().map(|&x| {x.max(0.0)}).sum();
+        let ky_dim = kaplan_yorke_dim(&spectra);
+
+        return Self {
+            lyapunov_spectra:   spectra,
+            ks_entropy:         ks_entropy,
+            kaplan_yorke_dim:   ky_dim
+        };
+    }
+
+    // Getters
+    pub fn get_lyapunov_spectra(&self) -> [f64; N] {return self.lyapunov_spectra;}
+    pub fn get_lyapunov_time(&self) -> f64 {return 1.0/self.lyapunov_spectra[0];}
+    pub fn get_ks_entropy(&self) -> f64 {return self.ks_entropy;}
+    pub fn get_ky_dim(&self) -> f64 {return self.kaplan_yorke_dim;}
+}
+
+// The main type we will be using for ergodic computations of the billiards
+pub type ErgodicStats = ErgodicStatistics<NUM_TANGENTS>;
 impl ErgodicStats
 {
     // Compute ergodic quantities from the trajectory
-    pub fn compute(traj: &Trajectory) -> Self {
+    pub fn compute_from_trajectory(traj: &Trajectory) -> Self {
 
         // Get and sort the Lyapunov spectra
         let mut spectra: [f64; NUM_TANGENTS] = traj.curr_lya_spectra();
@@ -32,18 +58,12 @@ impl ErgodicStats
             kaplan_yorke_dim:   ky_dim
         }
     }
-
-    // Getters
-    pub fn get_lyapunov_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra;}
-    pub fn get_lyapunov_time(&self) -> f64 {return 1.0/self.lyapunov_spectra[0];}
-    pub fn get_ks_entropy(&self) -> f64 {return self.ks_entropy;}
-    pub fn get_ky_dim(&self) -> f64 {return self.kaplan_yorke_dim;}
 }
 
 // Kaplan-Yorke dimension
 // IMPORTANT: This assume we have sorted the spectra (not sorting here since there can be a way to shoehorn the sorting somewhere else)
 // Also this is most likely integer-valued for this billiards model although it is worth it to give it a proper treatment
-pub fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
+fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
 {
     let mut sum: f64 = 0.0;
     let mut positive_count: usize = 0;

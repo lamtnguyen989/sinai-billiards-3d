@@ -1,23 +1,47 @@
 use billiards_logic::ergodic::*;
-use glam::Vec3;
-use glam::DVec3;
 
 
 #[test]
-fn wiki_ky_dim(){
+fn wiki_kaplan_yorke() {
     // Based on Wikipedia: https://en.wikipedia.org/wiki/Kaplan%E2%80%93Yorke_conjecture
     let MARGIN_OF_ERROR: f64 = 1e-2;    // This is due to Wiki page only gives up to 2 decimals data
 
     // Henon map
     let henon_spectra: [f64; 2] = [0.603, -2.34];
-    let computed_henon_ky_dim = kaplan_yorke_dim(&henon_spectra);
+    let henonStats: ErgodicStatistics<2> = ErgodicStatistics::new(&henon_spectra);
     let expected_henon_ky_dim = 1.26;
+    let computed_henon_ky_dim = henonStats.get_ky_dim();
     assert!((computed_henon_ky_dim - expected_henon_ky_dim).abs() <= MARGIN_OF_ERROR);
+    assert!((henonStats.get_lyapunov_time() - 1.0/henon_spectra[0]) <= MARGIN_OF_ERROR);
+    assert_eq!(henonStats.get_ks_entropy(), 0.603);
 
     // Lorenz system
-    let lorenz_spectra: [f64; 3] = [2.16, 0.0, -32.4];
-    let computed_lorenz_ky_dim = kaplan_yorke_dim(&lorenz_spectra);
+    let lorenz_spectra: [f64; 3] = [-32.4, 2.16, 0.0];
+    let lorenzStats: ErgodicStatistics<3> = ErgodicStatistics::new(&lorenz_spectra);
     let expected_lorenz_ky_dim = 2.07;
+    let computed_lorenz_ky_dim = lorenzStats.get_ky_dim();
+    let sorted_lorenz_spectra: [f64; 3] = lorenzStats.get_lyapunov_spectra();
     assert!((computed_lorenz_ky_dim - expected_lorenz_ky_dim).abs() <= MARGIN_OF_ERROR);
+    assert_eq!(sorted_lorenz_spectra, [2.16, 0.0, -32.4]);
+    assert!((lorenzStats.get_lyapunov_time() - 1.0/sorted_lorenz_spectra[0]) <= MARGIN_OF_ERROR);
+    assert_eq!(lorenzStats.get_ks_entropy(), sorted_lorenz_spectra[0]);
 }
 
+// Further testing based on: https://digitalcommons.georgiasouthern.edu/cgi/viewcontent.cgi?article=3478&context=etd
+fn coupled_lorenz_test()
+{
+    let MARGIN_OF_ERROR: f64 = 1e-4;
+    let coupled_lorenz_spectra: [f64; 6] = [1.1062, 0.84536, -0.013101, -0.012153, -18.366, -19.051];
+    let shuffled_spectra: [f64; 6] = [-18.366, 0.84536, -0.012153, -0.013101, -19.051, 1.1062];
+
+    let stats = ErgodicStats::new(&shuffled_spectra);
+    let expected_ky_dim: f64= coupled_lorenz_spectra[0..4].iter().sum();
+    let computed_ky_dim = stats.get_ky_dim();
+    let spectra = stats.get_lyapunov_spectra();
+    let expected_ks_entropy: f64 = coupled_lorenz_spectra[0..2].iter().sum();
+
+    assert_eq!(stats.get_lyapunov_spectra(), coupled_lorenz_spectra);
+    assert!((computed_ky_dim - expected_ky_dim).abs() < MARGIN_OF_ERROR);
+    assert!((stats.get_lyapunov_time() - 1.0/spectra[0]) < MARGIN_OF_ERROR);
+    assert!((stats.get_ks_entropy() - expected_ks_entropy) < MARGIN_OF_ERROR);
+}
