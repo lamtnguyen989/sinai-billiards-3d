@@ -99,7 +99,7 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
     else                            { return None;}
 }
 
-pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
+pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3, f32, bool)>
 {
     // Normalize the velocity as the intersections depends on it
     let v = vel.normalize();
@@ -122,7 +122,7 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3)>
     let new_vel : Vec3 = if (hit_sphere) {reflection_sphere(new_pos, v)}
                         else {reflection_box(new_pos, v)};
 
-    return Some((new_pos, new_vel));
+    return Some((new_pos, new_vel, t, hit_sphere));
 }
 
 
@@ -178,9 +178,11 @@ pub struct Trajectory
     positions:              Vec<glam::Vec3>,
     velocities:             Vec<glam::Vec3>,
     lyapunov_spectra:       LyapunovSpectra,
+    collision_count:        usize,
+    distance_travelled:     f64,
+    mean_free_path:         f64,
 
     // Extra rendering data
-    pub collision_count:    usize,
     pub color:              [f32; 4],   // RGBA values
 }
 
@@ -193,6 +195,8 @@ impl Trajectory
             velocities:                 vec![vel.normalize()],
             lyapunov_spectra:           LyapunovSpectra::default(),
             collision_count:            0,
+            distance_travelled:         0.0,
+            mean_free_path:             0.0,
             color:                      color
         }
     }
@@ -201,6 +205,13 @@ impl Trajectory
     pub fn current_pos(&self) -> Vec3 {return *self.positions.last().unwrap();}
     pub fn current_vel(&self) -> Vec3 {return *self.velocities.last().unwrap();}
     pub fn curr_lya_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra.spectrum;}
+    pub fn get_collision_count(&self) -> usize {return self.collision_count;}
+    pub fn get_mean_free_path(&self) -> f64 {return self.distance_travelled / self.collision_count as f64;}
+
+    // Update trajectory
+    pub fn update(&mut self) {
+        todo!("Implement update mechanism for the trajectory");
+    }
 }
 
 
@@ -219,6 +230,11 @@ fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
     return increments;
 }
 
+fn build_phase_frame(frame: &mut Matrix6<f64>)
+{
+    todo!("Implement the phase frame building!");
+}
+
 // Trajectory Lyapunov spectra computation handler
 #[derive(Clone, Default)]
 struct LyapunovSpectra
@@ -234,8 +250,18 @@ impl LyapunovSpectra
         todo!("Compute the Lyapunov Spectra via perturbation Linear Algebra");
     }
 
-    // Compute Lyapunov spectrum 
-    pub fn compute_spectrum() {
-        todo!("Still need to implement the full spectrum calculations");
+    // Compute Lyapunov spectrum after a collision
+    pub fn compute_spectrum(&mut self, trajectory: Trajectory, t: f64, hit_sphere: bool) {
+        
+        let r = SPHERE_RADIUS as f64;
+        let n = trajectory.get_collision_count() as f64;
+
+        // Compute phase frame 
+        todo!("Compute and fill in the frame");
+
+        // Update the spectra based on computed increments
+        let increments: [f64; NUM_TANGENTS] = compute_lya_increments(&mut self.frame);
+        self.spectrum.iter_mut().zip(increments)
+                    .for_each(|(lya_exp, increment)| {*lya_exp += ((*lya_exp - increment) / n);});
     }
 }

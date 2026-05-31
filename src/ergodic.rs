@@ -35,6 +35,7 @@ impl ErgodicStats
 
     // Getters
     pub fn get_lyapunov_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra;}
+    pub fn get_lyapunov_time(&self) -> f64 {return 1.0/self.lyapunov_spectra[0];}
     pub fn get_ks_entropy(&self) -> f64 {return self.ks_entropy;}
     pub fn get_ky_dim(&self) -> f64 {return self.kaplan_yorke_dim;}
 }
