@@ -5,7 +5,7 @@ pub const NUM_TANGENTS: usize = 6;
 /***
 *   Tangent vector in the phase space (linear perturbation of a trajectory point in phase space)
 ***/
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub struct TangentPhaseVector
 {
     d_position: DVec3,  // Position tangent
