@@ -28,20 +28,26 @@ fn wiki_kaplan_yorke() {
 }
 
 // Further testing based on: https://digitalcommons.georgiasouthern.edu/cgi/viewcontent.cgi?article=3478&context=etd
+#[test]
 fn coupled_lorenz_test()
 {
-    let MARGIN_OF_ERROR: f64 = 1e-4;
-    let coupled_lorenz_spectra: [f64; 6] = [1.1062, 0.84536, -0.013101, -0.012153, -18.366, -19.051];
+    // Setup
+    let MARGIN_OF_ERROR: f64 = 1e-10;
+    let coupled_lorenz_spectra: [f64; 6] = [1.1062, 0.84536, -0.012153, -0.013101, -18.366, -19.051];
     let shuffled_spectra: [f64; 6] = [-18.366, 0.84536, -0.012153, -0.013101, -19.051, 1.1062];
-
     let stats = ErgodicStats::new(&shuffled_spectra);
-    let expected_ky_dim: f64= coupled_lorenz_spectra[0..4].iter().sum();
-    let computed_ky_dim = stats.get_ky_dim();
+    
+    // Spectra processing test
     let spectra = stats.get_lyapunov_spectra();
-    let expected_ks_entropy: f64 = coupled_lorenz_spectra[0..2].iter().sum();
-
     assert_eq!(stats.get_lyapunov_spectra(), coupled_lorenz_spectra);
+
+    // Kaplan-Yorke dimension test
+    let expected_ky_dim = 4.0 + (coupled_lorenz_spectra[0..4].iter().sum::<f64>() / f64::abs(coupled_lorenz_spectra[4]));
+    let computed_ky_dim = stats.get_ky_dim();
     assert!((computed_ky_dim - expected_ky_dim).abs() < MARGIN_OF_ERROR);
+
+    // Metric entropy test
+    let expected_ks_entropy: f64 = coupled_lorenz_spectra[0..2].iter().sum();
     assert!((stats.get_lyapunov_time() - 1.0/spectra[0]) < MARGIN_OF_ERROR);
     assert!((stats.get_ks_entropy() - expected_ks_entropy) < MARGIN_OF_ERROR);
 }
