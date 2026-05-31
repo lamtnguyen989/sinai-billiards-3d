@@ -50,7 +50,7 @@ pub fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
 
     for (k, &lya_exp) in lya_spectra.iter().enumerate() {
         // Find the point in which sum turns negative   
-        if (sum + lya_exp < 0.0) {
+        if sum + lya_exp < 0.0 {
             break;
         }
         // Increment
@@ -60,7 +60,7 @@ pub fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
 
     // All positive sum has no trailing dimension computation
     let neg_point_abs = lya_spectra[positive_count].abs();
-    if (positive_count >= lya_spectra.len() || neg_point_abs < 1e-16) {
+    if positive_count >= lya_spectra.len() || neg_point_abs < 1e-16 {
         return lya_spectra.len() as f64;
     }
     // Follow the formula from here
