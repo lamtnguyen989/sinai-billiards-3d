@@ -158,7 +158,7 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n
     let pos_reflection: DVec3 = tpv_position - (2.0 * tpv_position.dot(n))*n;  
     let mom_reflection: DVec3 = tpv_momentum - (2.0 * tpv_momentum.dot(n))*n;
 
-    let sphere_correction:DVec3 =  curr_momentum.dot(n) * tpv_position 
+    let sphere_correction:DVec3 = curr_momentum.dot(n) * tpv_position 
                                 - tpv_position.dot(n) * curr_momentum 
                                 + curr_momentum.dot(tpv_position) * n
                                 - (curr_momentum.dot(curr_momentum) / curr_momentum.dot(n)) * (tpv_position.dot(n)) * n;
@@ -170,6 +170,11 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n
 /*** 
 *   Billiards trajectory 
 ***/
+pub enum TrajectoryError {
+    NoCollision,
+    UnknownWallNormal
+}
+
 #[derive(Clone)]
 pub struct Trajectory
 {
@@ -190,13 +195,13 @@ impl Trajectory
     // Constructor
     pub fn new(pos: Vec3, vel: Vec3, color: [f32; 4]) -> Self {
         return Self {
-            positions:                  vec![pos],
-            velocities:                 vec![vel.normalize()],
-            lyapunov_spectra:           LyapunovSpectra::new(),
-            collision_count:            0,
-            distance_travelled:         0.0,
-            mean_free_path:             0.0,
-            color:                      color
+            positions:              vec![pos],
+            velocities:             vec![vel.normalize()],
+            lyapunov_spectra:       LyapunovSpectra::new(),
+            collision_count:        0,
+            distance_travelled:     0.0,
+            mean_free_path:         0.0,
+            color:                  color
         }
     }
 
@@ -208,8 +213,44 @@ impl Trajectory
     pub fn get_mean_free_path(&self) -> f64 {return self.distance_travelled / self.collision_count as f64;}
 
     // Update trajectory
-    pub fn update(&mut self) {
-        todo!("Implement update mechanism for the trajectory");
+    pub fn update(&mut self, max_history: usize) -> Result<(), TrajectoryError> {
+        // Extracting current position and velocity
+        let pos = self.current_pos();
+        let vel = self.current_vel();
+
+        // Compute the next collision phase point
+        let (new_pos, new_vel, t, hit_sphere) = collision(pos, vel).ok_or(TrajectoryError::NoCollision)?;
+
+        // Compute the normal vectors
+        let n_wall: DVec3 = wall_normal(pos).ok_or(TrajectoryError::UnknownWallNormal)?;
+        let n_sphere: DVec3 = (new_pos - SPHERE_CENTER).as_dvec3() / SPHERE_RADIUS as f64;
+
+        // Update 
+        let current_vel = new_vel.as_dvec3();
+        if (self.positions.len() >= max_history)  {self.positions.remove(0);}
+        if (self.velocities.len() >= max_history) {self.velocities.remove(0);}
+
+        self.positions.push(new_pos);
+        self.velocities.push(new_vel);
+        self.collision_count += 1;
+        self.distance_travelled += t as f64;    // This is due to velocity is normalized in collision computation and distance is a scalar
+        self.mean_free_path =  self.distance_travelled / self.collision_count as f64;
+        self.lyapunov_spectra.update_spectrum(t as f64, hit_sphere, current_vel, n_wall, n_sphere, self.collision_count);
+
+        Ok(())
+    }
+}
+
+// Find nearest wall's outward normal to the trajectory
+fn wall_normal(pos: Vec3) -> Option<DVec3> {
+    let wall_distances: [f32; 3] = std::array::from_fn(|k| {pos[k].min(BOX_SIZE - pos[k])});
+    match wall_distances.iter().enumerate()
+                        .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                        .unwrap().0 {
+        0 => Some(DVec3::X),
+        1 => Some(DVec3::Y),
+        2 => Some(DVec3::Z),
+        _ => None
     }
 }
 
@@ -263,13 +304,12 @@ impl LyapunovSpectra
                         momentum_in: DVec3, n_wall: DVec3, n_sphere: DVec3,
                         collision_count: usize) 
     {
-        let r = SPHERE_RADIUS as f64;
         let n = collision_count as f64;
 
         // Compute the phase frame both in free-flight and after collision
         compute_phase_frame(&mut self.frame, |w| {phase_tangent_free_flight(w, t)});
         compute_phase_frame(&mut self.frame, |w| {
-            if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, r)}
+            if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, SPHERE_RADIUS as f64)}
             else            {phase_tangent_wall_reflect(w, n_wall)}
         });
 
