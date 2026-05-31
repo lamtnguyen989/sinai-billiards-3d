@@ -170,7 +170,7 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n
 /*** 
 *   Billiards trajectory 
 ***/
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Trajectory
 {
     // Actual physics and math fields
@@ -192,7 +192,7 @@ impl Trajectory
         return Self {
             positions:                  vec![pos],
             velocities:                 vec![vel.normalize()],
-            lyapunov_spectra:           LyapunovSpectra::default(),
+            lyapunov_spectra:           LyapunovSpectra::new(),
             collision_count:            0,
             distance_travelled:         0.0,
             mean_free_path:             0.0,
@@ -241,7 +241,7 @@ fn compute_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPh
 }
 
 // Trajectory Lyapunov spectra computation handler
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct LyapunovSpectra
 {
     frame   : Matrix6<f64>,
@@ -252,7 +252,7 @@ impl LyapunovSpectra
 {
     // Constructor
     pub fn new() -> Self {
-        return Self{
+        return Self {
             frame   : Matrix6::identity(),
             spectrum: [0.0; NUM_TANGENTS]
         }
@@ -276,6 +276,6 @@ impl LyapunovSpectra
         // Update the spectra and phase frame based on computed increments
         let increments: [f64; NUM_TANGENTS] = compute_lya_increments(&mut self.frame);
         self.spectrum.iter_mut().zip(increments)
-                    .for_each(|(lya_exp, increment)| {*lya_exp += ((*lya_exp - increment) / n);});
+                    .for_each(|(lya_exp, increment)| {*lya_exp += (*lya_exp - increment) / n;});
     }
 }
