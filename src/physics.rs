@@ -1,6 +1,6 @@
 use rand::Rng;
 use glam::{Vec3, DVec3};
-use nalgebra::{Matrix6, U6};
+use nalgebra::{SMatrix, Matrix6, U6};
 
 use crate::tangent::{NUM_TANGENTS, TangentPhaseVector};
 
@@ -181,9 +181,9 @@ pub struct Trajectory
     // Actual physics and math fields
     positions:              Vec<glam::Vec3>,
     velocities:             Vec<glam::Vec3>,
-    lyapunov_spectra:       LyapunovSpectra,
+    lyapunov_spectra:       TrajectoryPhaseLyapunovSpectra,
     collision_count:        usize,
-    distance_travelled:     f64,
+    distance_travelled:     f64,    // This is also the total simulation time due to |x| = t*|v| and we are using unit velocity |v| = 1
     mean_free_path:         f64,
 
     // Extra rendering data
@@ -197,7 +197,7 @@ impl Trajectory
         return Self {
             positions:              vec![pos],
             velocities:             vec![vel.normalize()],
-            lyapunov_spectra:       LyapunovSpectra::new(),
+            lyapunov_spectra:       TrajectoryPhaseLyapunovSpectra::new(),
             collision_count:        0,
             distance_travelled:     0.0,
             mean_free_path:         0.0,
@@ -222,20 +222,20 @@ impl Trajectory
         let (new_pos, new_vel, t, hit_sphere) = collision(pos, vel).ok_or(TrajectoryError::NoCollision)?;
 
         // Compute the normal vectors
-        let n_wall: DVec3 = wall_normal(pos).ok_or(TrajectoryError::UnknownWallNormal)?;
+        let n_wall: DVec3 = wall_normal(new_pos).ok_or(TrajectoryError::UnknownWallNormal)?;
         let n_sphere: DVec3 = (new_pos - SPHERE_CENTER).as_dvec3() / SPHERE_RADIUS as f64;
 
         // Update 
         let current_vel = new_vel.as_dvec3();
-        if (self.positions.len() >= max_history)  {self.positions.remove(0);}
-        if (self.velocities.len() >= max_history) {self.velocities.remove(0);}
+        if self.positions.len() >= max_history  {self.positions.remove(0);}
+        if self.velocities.len() >= max_history {self.velocities.remove(0);}
 
         self.positions.push(new_pos);
         self.velocities.push(new_vel);
         self.collision_count += 1;
-        self.distance_travelled += t as f64;    // This is due to velocity is normalized in collision computation and distance is a scalar
+        self.distance_travelled += t as f64;
         self.mean_free_path =  self.distance_travelled / self.collision_count as f64;
-        self.lyapunov_spectra.update_spectrum(t as f64, hit_sphere, current_vel, n_wall, n_sphere, self.collision_count);
+        self.lyapunov_spectra.update_spectrum(t as f64, hit_sphere, current_vel, n_wall, n_sphere, self.distance_travelled);
 
         Ok(())
     }
@@ -245,7 +245,7 @@ impl Trajectory
 fn wall_normal(pos: Vec3) -> Option<DVec3> {
     let wall_distances: [f32; 3] = std::array::from_fn(|k| {pos[k].min(BOX_SIZE - pos[k])});
     match wall_distances.iter().enumerate()
-                        .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                        .min_by(|(_, a), (_, b)| {a.partial_cmp(b).unwrap()})
                         .unwrap().0 {
         0 => Some(DVec3::X),
         1 => Some(DVec3::Y),
@@ -254,6 +254,65 @@ fn wall_normal(pos: Vec3) -> Option<DVec3> {
     }
 }
 
+// Trajectory Lyapunov spectra computation handler
+#[derive(Clone)]
+struct LyapunovSpectra<const N: usize>
+{
+    frame:      SMatrix<f64, N, N>,
+    spectrum:   [f64; N]
+}
+
+impl<const N: usize> LyapunovSpectra<N> 
+{
+    // Constructor
+    pub fn new() -> Self {
+        return Self {
+            frame:      SMatrix::identity(),
+            spectrum:   [0.0; N]
+        }
+    }
+
+    /* 
+    // Very much broken due to trait bounds 
+    pub fn compute_from_frame(&mut self, frame: &mut SMatrix<f64, N, N>, t: f64, total_time: f64) -> () {
+        // Take QR-decomposition of the frame
+        let frame_qr_decomp = frame.clone().qr();
+
+        // Update the frame as the Q-matrix
+        *frame = frame_qr_decomp.copy_from(&frame_qr_decomp.q());
+
+        // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix
+        let R = frame_qr_decomp.r();
+        let increments = std::array::from_fn(|k| {f64::ln(R[(k,k)].abs().max(1e-16))});
+
+        // Update the spectra and phase frame based on computed increments
+        self.spectrum.iter_mut().zip(increments)
+                    .for_each(|(lya_exp, increment)| {*lya_exp += (increment - *lya_exp) / total_time;});
+    }
+    */
+}
+
+type TrajectoryPhaseLyapunovSpectra = LyapunovSpectra<NUM_TANGENTS>;
+impl TrajectoryPhaseLyapunovSpectra
+{
+    // Compute Lyapunov spectrum after a collision
+    pub fn update_spectrum(&mut self, t: f64, hit_sphere: bool,
+                        momentum_in: DVec3, n_wall: DVec3, n_sphere: DVec3,
+                        total_time: f64) 
+    {
+        // Compute the phase frame both in free-flight and after collision
+        compute_phase_frame(&mut self.frame, |w| {phase_tangent_free_flight(w, t)});
+        compute_phase_frame(&mut self.frame, |w| {
+            if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, SPHERE_RADIUS as f64)}
+            else            {phase_tangent_wall_reflect(w, n_wall)}
+        });
+
+        // Update the spectra and phase frame based on computed increments
+        let increments: [f64; NUM_TANGENTS] = compute_lya_increments(&mut self.frame);
+        self.spectrum.iter_mut().zip(increments)
+                    .for_each(|(lya_exp, increment)| {*lya_exp += (increment - *lya_exp) / total_time;});
+    }
+}
 
 fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
 {
@@ -278,44 +337,5 @@ fn compute_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPh
         let curr_column_values: [f64; NUM_TANGENTS] = std::array::from_fn(|k| frame[(k, col)]);
         let updated_column_values: [f64; NUM_TANGENTS] = compute_type(TangentPhaseVector::from_array(curr_column_values)).as_array();
         for k in 0..NUM_TANGENTS {frame[(k, col)] = updated_column_values[k];}
-    }
-}
-
-// Trajectory Lyapunov spectra computation handler
-#[derive(Clone)]
-struct LyapunovSpectra
-{
-    frame   : Matrix6<f64>,
-    spectrum: [f64; NUM_TANGENTS]
-}
-
-impl LyapunovSpectra
-{
-    // Constructor
-    pub fn new() -> Self {
-        return Self {
-            frame   : Matrix6::identity(),
-            spectrum: [0.0; NUM_TANGENTS]
-        }
-    }
-
-    // Compute Lyapunov spectrum after a collision
-    pub fn update_spectrum(&mut self, t: f64, hit_sphere: bool,
-                        momentum_in: DVec3, n_wall: DVec3, n_sphere: DVec3,
-                        collision_count: usize) 
-    {
-        let n = collision_count as f64;
-
-        // Compute the phase frame both in free-flight and after collision
-        compute_phase_frame(&mut self.frame, |w| {phase_tangent_free_flight(w, t)});
-        compute_phase_frame(&mut self.frame, |w| {
-            if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, SPHERE_RADIUS as f64)}
-            else            {phase_tangent_wall_reflect(w, n_wall)}
-        });
-
-        // Update the spectra and phase frame based on computed increments
-        let increments: [f64; NUM_TANGENTS] = compute_lya_increments(&mut self.frame);
-        self.spectrum.iter_mut().zip(increments)
-                    .for_each(|(lya_exp, increment)| {*lya_exp += (*lya_exp - increment) / n;});
     }
 }
