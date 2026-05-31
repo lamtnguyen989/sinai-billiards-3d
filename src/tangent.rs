@@ -32,7 +32,7 @@ impl TangentPhaseVector
 
     // Dot product
     pub fn dot(self, other: Self) -> f64 {
-        return self.d_momentum.dot(other.d_momentum) + self.d_position .dot(other.d_position );
+        return self.d_momentum.dot(other.d_momentum) + self.d_position .dot(other.d_position);
     }
 
     // Norm
@@ -43,6 +43,8 @@ impl TangentPhaseVector
     // Getters
     pub fn get_position_tangent(self) -> DVec3 {return self.d_position;}
     pub fn get_momentum_tangent(self) -> DVec3 {return self.d_momentum;}
+    pub fn as_array(&self) -> [f64; NUM_TANGENTS] {return [ self.d_position.x, self.d_position.y, self.d_position.z, 
+                                                            self.d_momentum.x, self.d_momentum.y, self.d_momentum.z];}
 }
 
 /// Overloading operators for arithmetics ///

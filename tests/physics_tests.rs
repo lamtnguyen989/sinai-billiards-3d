@@ -23,6 +23,8 @@ fn test_phase_tangent_creation() {
 
     assert_eq!(pt.get_position_tangent(), DVec3::new(arr_val[0], arr_val[1], arr_val[2]));
     assert_eq!(pt.get_momentum_tangent(), DVec3::new(arr_val[3], arr_val[4], arr_val[5]));
+    assert_eq!(pt.as_array().len(), NUM_TANGENTS);
+    assert_eq!(pt.as_array(), arr_val);
 }
 
 #[test]

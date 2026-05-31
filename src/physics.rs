@@ -29,9 +29,9 @@ fn reflection_sphere(pos: Vec3, vel: Vec3) -> Vec3
 fn reflection_box(pos: Vec3, vel: Vec3) -> Vec3
 {
     let mut v = vel;
-    if (pos.x < PHYS_EPSILON || pos.x > (BOX_SIZE - PHYS_EPSILON)) {v.x = -v.x;}
-    if (pos.y < PHYS_EPSILON || pos.y > (BOX_SIZE - PHYS_EPSILON)) {v.y = -v.y;}
-    if (pos.z < PHYS_EPSILON || pos.z > (BOX_SIZE - PHYS_EPSILON)) {v.z = -v.z;}
+    if pos.x < PHYS_EPSILON || pos.x > (BOX_SIZE - PHYS_EPSILON) {v.x = -v.x;}
+    if pos.y < PHYS_EPSILON || pos.y > (BOX_SIZE - PHYS_EPSILON) {v.y = -v.y;}
+    if pos.z < PHYS_EPSILON || pos.z > (BOX_SIZE - PHYS_EPSILON) {v.z = -v.z;}
 
     return v;
 }
@@ -56,13 +56,13 @@ fn sphere_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
     let discriminant: f32 = b*b - 4.0*c;
 
     // Solution existence checks first (i.e. does it actually hit the sphere?)
-    if (discriminant < 0.0)     { return None;}
+    if discriminant < 0.0       { return None;}
     
     // Finding the 2 roots and return the correct time
     let (t1, t2) = (0.5*(-b - discriminant.sqrt()), 0.5*(-b + discriminant.sqrt()));
-    if      (t1 > PHYS_EPSILON) { return Some(t1);}
-    else if (t2 > PHYS_EPSILON) { return Some(t2);}
-    else                        { return None;}
+    if      t1 > PHYS_EPSILON { return Some(t1);}
+    else if t2 > PHYS_EPSILON { return Some(t2);}
+    else                      { return None;}
     
 }
 
@@ -77,13 +77,12 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
     let mut t_min = PHYS_EPSILON;
     let mut t_max = 1e10_f32;
 
-    for k in (0..3) {
+    for k in 0..3 {
         let v = vel[k];
         let p = pos[k];
 
-        if (v.abs() < PHYS_EPSILON)
-        {
-            if (p < 0.0 || p > BOX_SIZE) { return None;}
+        if v.abs() < PHYS_EPSILON {
+            if p < 0.0 || p > BOX_SIZE { return None;}
             continue;
         }
         let (t0, t1) : (f32, f32) = (-p/v, (BOX_SIZE - p)/v);
@@ -91,12 +90,12 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
         
         t_min = f32::max(t_min, lo);
         t_max = f32::min(t_max, hi);
-        if (t_min > t_max) { return None; }
+        if t_min > t_max { return None; }
     }
 
-    if      (t_min > PHYS_EPSILON)  { return Some(t_min);}
-    else if (t_max > PHYS_EPSILON)  { return Some(t_max);}
-    else                            { return None;}
+    if      t_min > PHYS_EPSILON  { return Some(t_min);}
+    else if t_max > PHYS_EPSILON  { return Some(t_max);}
+    else                          { return None;}
 }
 
 pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3, f32, bool)>
@@ -110,16 +109,16 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3, f32, bool)>
 
     // Process the intersection times
     let (t, hit_sphere) : (f32, bool) = match(t_sph, t_box) {
-        (Some(ts), Some(tb)) if (ts < tb)   => (ts, true),
-        (_, Some(tb))                       => (tb, false),
-        (Some(ts), _)                       => (ts, true),
-        _                                   => return None
+        (Some(ts), Some(tb)) if ts < tb => (ts, true),
+        (_, Some(tb))                   => (tb, false),
+        (Some(ts), _)                   => (ts, true),
+        _                               => return None
     }; 
-    if (t < PHYS_EPSILON) { return None;}
+    if t < PHYS_EPSILON { return None;}
     
     // Compute the new position and velocity
-    let new_pos : Vec3 = (pos + t*v);
-    let new_vel : Vec3 = if (hit_sphere) {reflection_sphere(new_pos, v)}
+    let new_pos : Vec3 = pos + t*v;
+    let new_vel : Vec3 = if hit_sphere {reflection_sphere(new_pos, v)} 
                         else {reflection_box(new_pos, v)};
 
     return Some((new_pos, new_vel, t, hit_sphere));
@@ -230,9 +229,15 @@ fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
     return increments;
 }
 
-fn build_phase_frame(frame: &mut Matrix6<f64>)
+
+fn compute_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPhaseVector) -> TangentPhaseVector) -> ()
 {
-    todo!("Implement the phase frame building!");
+    // Compute the phase frame column-by-column
+    for col in 0..NUM_TANGENTS {
+        let curr_column_values: [f64; NUM_TANGENTS] = std::array::from_fn(|k| frame[(k, col)]);
+        let updated_column_values: [f64; NUM_TANGENTS] = compute_type(TangentPhaseVector::from_array(curr_column_values)).as_array();
+        for k in 0..NUM_TANGENTS {frame[(k, col)] = updated_column_values[k];}
+    }
 }
 
 // Trajectory Lyapunov spectra computation handler
@@ -247,19 +252,28 @@ impl LyapunovSpectra
 {
     // Constructor
     pub fn new() -> Self {
-        todo!("Compute the Lyapunov Spectra via perturbation Linear Algebra");
+        return Self{
+            frame   : Matrix6::identity(),
+            spectrum: [0.0; NUM_TANGENTS]
+        }
     }
 
     // Compute Lyapunov spectrum after a collision
-    pub fn compute_spectrum(&mut self, trajectory: Trajectory, t: f64, hit_sphere: bool) {
-        
+    pub fn update_spectrum(&mut self, t: f64, hit_sphere: bool,
+                        momentum_in: DVec3, n_wall: DVec3, n_sphere: DVec3,
+                        collision_count: usize) 
+    {
         let r = SPHERE_RADIUS as f64;
-        let n = trajectory.get_collision_count() as f64;
+        let n = collision_count as f64;
 
-        // Compute phase frame 
-        todo!("Compute and fill in the frame");
+        // Compute the phase frame both in free-flight and after collision
+        compute_phase_frame(&mut self.frame, |w| {phase_tangent_free_flight(w, t)});
+        compute_phase_frame(&mut self.frame, |w| {
+            if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, r)}
+            else            {phase_tangent_wall_reflect(w, n_wall)}
+        });
 
-        // Update the spectra based on computed increments
+        // Update the spectra and phase frame based on computed increments
         let increments: [f64; NUM_TANGENTS] = compute_lya_increments(&mut self.frame);
         self.spectrum.iter_mut().zip(increments)
                     .for_each(|(lya_exp, increment)| {*lya_exp += ((*lya_exp - increment) / n);});
