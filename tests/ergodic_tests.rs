@@ -34,12 +34,15 @@ fn coupled_lorenz_test()
     // Setup
     let MARGIN_OF_ERROR: f64 = 1e-10;
     let coupled_lorenz_spectra: [f64; 6] = [1.1062, 0.84536, -0.012153, -0.013101, -18.366, -19.051];
-    let shuffled_spectra: [f64; 6] = [-18.366, 0.84536, -0.012153, -0.013101, -19.051, 1.1062];
+    let shuffled_spectra: [f64; 6] = [-18.366, 0.84536, -0.013101, -0.012153, -19.051, 1.1062];
     let stats = ErgodicStats::new(&shuffled_spectra);
     
     // Spectra processing test
     let spectra = stats.get_lyapunov_spectra();
-    assert_eq!(stats.get_lyapunov_spectra(), coupled_lorenz_spectra);
+    assert_eq!(spectra, coupled_lorenz_spectra);
+
+    // Lyapunov time check
+    assert_eq!(1.0/spectra[0], stats.get_lyapunov_time());
 
     // Kaplan-Yorke dimension test
     let expected_ky_dim = 4.0 + (coupled_lorenz_spectra[0..4].iter().sum::<f64>() / f64::abs(coupled_lorenz_spectra[4]));
