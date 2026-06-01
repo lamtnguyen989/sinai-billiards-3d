@@ -21,8 +21,7 @@ const MAX_HISTORY: usize = 5;
 struct State
 {
     trajectory:     Trajectory,
-    trail_length:   usize,
-    time_elapsed:   f32,
+    trail_length:   usize
 }
 
 impl State

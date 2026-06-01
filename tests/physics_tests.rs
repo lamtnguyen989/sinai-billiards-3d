@@ -1,7 +1,7 @@
 use billiards_logic::physics::*;
 use billiards_logic::tangent::*;
-use glam::DVec3;
-use glam::Vec3;
+use glam::{DVec3, Vec3};
+use nalgebra::{SMatrix};
 
 
 #[test]
@@ -49,4 +49,33 @@ fn test_phase_tangent_arithmetic() {
     assert_eq!((pt1*r).get_momentum_tangent(),  r*DVec3::new(a1[3], a1[4], a1[5]));
     assert_eq!((r*pt2).get_position_tangent(),  DVec3::new(a2[0]*r, a2[1]*r, a2[2]*r));
     assert_eq!((r*pt2).get_momentum_tangent(),  r*DVec3::new(a2[3], a2[4], a2[5]));
+}
+
+
+#[test]
+fn test_arnold_cat_lya_spectra() {
+    // Practical parameters
+    let MARGIN_OF_ERROR: f64 = 1e-5;
+    let ITERATION_STEPS = 1e5 as usize;
+
+    // Setting spectra object and base map matrix
+    let arnold_cat_map_column_slice: [f64; 4] = [2.0, 1.0, 1.0, 1.0];
+    let cat_map_matrix = SMatrix::from_column_slice(&arnold_cat_map_column_slice);
+    let mut arnold_cat_spectra = LyapunovSpectra::<2>::new();
+
+    // Iteratively simulate for high steps 
+    for step in 1..ITERATION_STEPS {
+        // Compute iteration's frame and update
+        let new_frame: SMatrix<f64, 2, 2> = cat_map_matrix * arnold_cat_spectra.get_frame();
+        arnold_cat_spectra.frame_from_slice(new_frame.as_slice(), FrameLayout::ColumnMajor);
+
+        // Update in "discrete" time
+        arnold_cat_spectra.compute_from_frame(1.0, step as f64);
+    }
+
+    // Test
+    let computed_spectra = arnold_cat_spectra.get_spectrum();
+    let expected_spectra: [f64; 2] = [f64::ln(0.5* (3.0 + f64::sqrt(5.0))), f64::ln(0.5* (3.0 - f64::sqrt(5.0)))];
+    assert!((expected_spectra[0] - computed_spectra[0]).abs() < MARGIN_OF_ERROR, "Expected: {}, Actual: {}", expected_spectra[0], computed_spectra[0]);
+    assert!((expected_spectra[1] - computed_spectra[1]).abs() < MARGIN_OF_ERROR, "Expected: {}, Actual: {}", expected_spectra[1], computed_spectra[1]);
 }

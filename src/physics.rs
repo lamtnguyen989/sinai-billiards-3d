@@ -1,6 +1,10 @@
-use rand::Rng;
+use rand::{Rng, RngExt};
 use glam::{Vec3, DVec3};
-use nalgebra::{SMatrix, Matrix6, U6};
+use nalgebra::{
+    SMatrix, Matrix6, U6, Const, DimMin,
+    DefaultAllocator, allocator::Allocator,
+    ArrayStorage,
+};
 
 use crate::tangent::{NUM_TANGENTS, TangentPhaseVector};
 
@@ -256,13 +260,18 @@ fn wall_normal(pos: Vec3) -> Option<DVec3> {
 
 // Trajectory Lyapunov spectra computation handler
 #[derive(Clone)]
-struct LyapunovSpectra<const N: usize>
+pub struct LyapunovSpectra<const N: usize>
 {
     frame:      SMatrix<f64, N, N>,
     spectrum:   [f64; N]
 }
 
+pub enum FrameLayout {ColumnMajor, RowMajor}
+
 impl<const N: usize> LyapunovSpectra<N> 
+where 
+    Const<N>: DimMin<Const<N>, Output = Const<N>>,
+    DefaultAllocator: Allocator<Const<N>, Const<N>, Buffer<f64> = ArrayStorage<f64, N, N>> + Allocator<Const<N>>,
 {
     // Constructor
     pub fn new() -> Self {
@@ -272,25 +281,40 @@ impl<const N: usize> LyapunovSpectra<N>
         }
     }
 
-    /* 
-    // Very much broken due to trait bounds 
-    pub fn compute_from_frame(&mut self, frame: &mut SMatrix<f64, N, N>, t: f64, total_time: f64) -> () {
+    
+    // Storing contents from array slice
+    pub fn frame_from_slice(&mut self, data: &[f64], frame_layout: FrameLayout) {
+        // I will need to make this a Result<_, _> later on for more comprehensive error handling
+        assert_eq!(data.len(), N*N, "Incompatible slice to build frame");
+
+        // Storing data
+        self.frame = match frame_layout {
+            FrameLayout::ColumnMajor => nalgebra::SMatrix::from_column_slice(data),
+            FrameLayout::RowMajor    => nalgebra::SMatrix::from_row_slice(data),
+        }
+    }
+        
+
+    // Compute the QR-decomposition of internal frame to get the Lyapunov spectra
+    pub fn compute_from_frame(&mut self, t: f64, total_time: f64) -> () {
         // Take QR-decomposition of the frame
-        let frame_qr_decomp = frame.clone().qr();
+        let frame_qr_decomp = self.frame.clone().qr();
 
         // Update the frame as the Q-matrix
-        *frame = frame_qr_decomp.copy_from(&frame_qr_decomp.q());
+        self.frame.copy_from(&frame_qr_decomp.q());
 
         // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix
-        let R = frame_qr_decomp.r();
-        let increments = std::array::from_fn(|k| {f64::ln(R[(k,k)].abs().max(1e-16))});
+        let r_mat = frame_qr_decomp.r();
+        let increments: [f64; N] = std::array::from_fn(|k| {f64::ln(r_mat[(k,k)].abs().max(1e-16))});
 
         // Update the spectra and phase frame based on computed increments
-        self.spectrum.iter_mut().zip(increments)
-                    .for_each(|(lya_exp, increment)| {*lya_exp += (increment - *lya_exp) / total_time;});
+        for k in 0..N {self.spectrum[k] += (increments[k] - self.spectrum[k]*t) / total_time;}
     }
-    */
-}
+
+    // Getters
+    pub fn get_spectrum(&self) -> [f64; N] {return self.spectrum;}
+    pub fn get_frame(&self) ->  SMatrix<f64, N, N> {return self.frame;}
+} 
 
 type TrajectoryPhaseLyapunovSpectra = LyapunovSpectra<NUM_TANGENTS>;
 impl TrajectoryPhaseLyapunovSpectra
@@ -301,36 +325,19 @@ impl TrajectoryPhaseLyapunovSpectra
                         total_time: f64) 
     {
         // Compute the phase frame both in free-flight and after collision
-        compute_phase_frame(&mut self.frame, |w| {phase_tangent_free_flight(w, t)});
-        compute_phase_frame(&mut self.frame, |w| {
+        compute_trajectory_phase_frame(&mut self.frame, |w| {phase_tangent_free_flight(w, t)});
+        compute_trajectory_phase_frame(&mut self.frame, |w| {
             if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, SPHERE_RADIUS as f64)}
             else            {phase_tangent_wall_reflect(w, n_wall)}
         });
 
         // Update the spectra and phase frame based on computed increments
-        let increments: [f64; NUM_TANGENTS] = compute_lya_increments(&mut self.frame);
-        self.spectrum.iter_mut().zip(increments)
-                    .for_each(|(lya_exp, increment)| {*lya_exp += (increment - *lya_exp) / total_time;});
+        self.compute_from_frame(t, total_time);
     }
 }
 
-fn compute_lya_increments(frame: &mut Matrix6<f64>) -> [f64; NUM_TANGENTS]
-{
-    // Take QR-decomposition of the frame
-    let frame_qr_decomp: nalgebra::QR<f64, U6, U6> = frame.qr();
 
-    // Update the frame as the Q-matrix
-    *frame = frame_qr_decomp.q();
-
-    // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix
-    let R: Matrix6<f64> = frame_qr_decomp.r();
-    let increments = std::array::from_fn(|k| {f64::ln(R[(k,k)].abs().max(1e-16))});
-
-    return increments;
-}
-
-
-fn compute_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPhaseVector) -> TangentPhaseVector) -> ()
+fn compute_trajectory_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPhaseVector) -> TangentPhaseVector) -> ()
 {
     // Compute the phase frame column-by-column
     for col in 0..NUM_TANGENTS {
@@ -338,4 +345,27 @@ fn compute_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl Fn(TangentPh
         let updated_column_values: [f64; NUM_TANGENTS] = compute_type(TangentPhaseVector::from_array(curr_column_values)).as_array();
         for k in 0..NUM_TANGENTS {frame[(k, col)] = updated_column_values[k];}
     }
+}
+
+
+/***
+*   Random trajectory spawner for develop rendering
+***/
+pub fn random_trajectory<R: Rng>(rng: &mut R, color: [f32; 4]) -> Trajectory
+{
+    // Random position outside the sphere (not really, but this is for testing purposes)
+    let p = Vec3::new(
+        0.8*BOX_SIZE * rng.random::<f32>() + BOX_SIZE * 0.1,
+        0.8*BOX_SIZE * rng.random::<f32>() + BOX_SIZE * 0.1,
+        0.8*BOX_SIZE * rng.random::<f32>() + BOX_SIZE * 0.1,
+    );
+
+    // Random unit velocity vector (could leave it random here due to constructor normalize no matter what, but again testing purposes)
+    let random_unit_vel = Vec3::new(    
+        rng.random_range(-1.0..1.0),
+        rng.random_range(-1.0..1.0),
+        rng.random_range(-1.0..1.0),
+    ).normalize();
+
+    return Trajectory::new(p, random_unit_vel, color);
 }
