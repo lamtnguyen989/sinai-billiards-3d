@@ -2,6 +2,10 @@ use billiards_logic::physics::*;
 use billiards_logic::tangent::*;
 use glam::{DVec3, Vec3};
 use nalgebra::{SMatrix};
+use rand::{
+    SeedableRng, 
+    rngs::StdRng
+};
 
 
 #[test]
@@ -78,4 +82,55 @@ fn test_arnold_cat_lya_spectra() {
     let expected_spectra: [f64; 2] = [f64::ln(0.5* (3.0 + f64::sqrt(5.0))), f64::ln(0.5* (3.0 - f64::sqrt(5.0)))];
     assert!((expected_spectra[0] - computed_spectra[0]).abs() < MARGIN_OF_ERROR, "Expected: {}, Actual: {}", expected_spectra[0], computed_spectra[0]);
     assert!((expected_spectra[1] - computed_spectra[1]).abs() < MARGIN_OF_ERROR, "Expected: {}, Actual: {}", expected_spectra[1], computed_spectra[1]);
+}
+
+#[test]
+fn test_random_trajectory_stays_in_box() {
+    // Setup random trajectory
+    let mut rng = StdRng::seed_from_u64(420);
+    let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0]);
+    let TEST_EPSILON: f32 = 1e-6;    // Stronger than PHYS_EPSILON
+    let STEPS = 1000;
+
+    // Run trajectory and check
+    for k in 0..STEPS {
+        traj.update(100).unwrap();
+        let p = traj.current_pos();
+        let v = traj.current_vel();
+        assert!(
+            p.x >= -TEST_EPSILON && p.x <= (BOX_SIZE + TEST_EPSILON) &&
+            p.y >= -TEST_EPSILON && p.y <= (BOX_SIZE + TEST_EPSILON) &&
+            p.z >= -TEST_EPSILON && p.z <= (BOX_SIZE + TEST_EPSILON),
+            "Escaped box at step {}: pos={:?} vel={:?}", k, p, v
+        );
+    }
+}
+
+
+#[test]
+fn test_qualitative_trajectory_lya_spectra_properties() {
+    // Setup random trajectory
+    let mut rng = StdRng::seed_from_u64(69);
+    let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0]);
+
+    // Update trajectory
+    let STEPS = 5000;
+    for k in 0..STEPS {traj.update(10).unwrap();}
+
+    // Testing pairing symmetry
+    let MARGIN_OF_ERROR = 1e-3; // Should be enough for rendering purposes
+    let spectra = traj.curr_lya_spectra();
+    for k in 0..NUM_TANGENTS/2 {
+        let pair_sum: f64 = spectra[k] + spectra[NUM_TANGENTS-1-k];
+        assert!(pair_sum.abs() < MARGIN_OF_ERROR,
+                "Pairing broken at index: {} with {} + {} = {}", k, spectra[k], spectra[NUM_TANGENTS-1-k], pair_sum);
+        
+    }
+
+    // Testing spectra sum should converge to zero
+    let spectra_sum: f64 = traj.curr_lya_spectra().iter().sum();
+    assert!(spectra_sum.abs() < MARGIN_OF_ERROR, "Lyapunov sum = {}", spectra_sum);
+
+    // Test that it is at least chaotic
+    assert!(spectra[0] > 0.0, "This ain't chaotic! Leading exponent: {}", spectra[0]);
 }

@@ -174,6 +174,7 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n
 /*** 
 *   Billiards trajectory 
 ***/
+#[derive(Debug)]
 pub enum TrajectoryError {
     NoCollision,
     UnknownWallNormal
