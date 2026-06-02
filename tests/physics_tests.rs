@@ -120,7 +120,7 @@ fn test_qualitative_trajectory_lya_spectra_properties() {
     for k in 0..STEPS {traj.update(10).unwrap();}
 
     // Testing pairing symmetry
-    let MARGIN_OF_ERROR = 1e-3; // Should be enough for rendering purposes
+    let MARGIN_OF_ERROR = 5e-4; // Should be enough for rendering purposes
     let spectra = traj.curr_lya_spectra();
     for k in 0..NUM_TANGENTS/2 {
         let pair_sum: f64 = spectra[k] + spectra[NUM_TANGENTS-1-k];

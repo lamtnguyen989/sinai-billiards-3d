@@ -47,7 +47,13 @@ where
             FrameLayout::RowMajor    => SMatrix::from_row_slice(data),
         }
     }
-        
+    
+    #[inline]
+    pub fn reorthorgonalize_frame(&mut self) {
+        // For improving stability and correctness of the solution spectra
+        let frame_qr_decomp = self.frame.clone().qr();
+        self.frame.copy_from(&frame_qr_decomp.q());
+    }
 
     // Compute the QR-decomposition of internal frame to get the Lyapunov spectra
     #[inline]
@@ -58,7 +64,7 @@ where
         // Update the frame as the Q-matrix (re-orthonormalize for numerical stability)
         self.frame.copy_from(&frame_qr_decomp.q());
 
-        // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix (eigenvalues approximation)
+        // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix (singular values approximation)
         let r_mat = frame_qr_decomp.r();
         let increments: [f64; N] = std::array::from_fn(|k| {f64::ln(r_mat[(k,k)].abs().max(1e-16))});
 

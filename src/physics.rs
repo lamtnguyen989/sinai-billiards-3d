@@ -267,6 +267,8 @@ impl TrajectoryPhaseLyapunovSpectra
     {
         // Compute the phase frame both in free-flight and after collision
         compute_trajectory_phase_frame(&mut self.get_frame_mut(), |w| {phase_tangent_free_flight(w, t)});
+        self.reorthorgonalize_frame();  // Re-orthogonalize for improved stability after free flight
+        
         compute_trajectory_phase_frame(&mut self.get_frame_mut(), |w| {
             if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, SPHERE_RADIUS as f64)}
             else            {phase_tangent_wall_reflect(w, n_wall)}
