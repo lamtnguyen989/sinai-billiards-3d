@@ -2,7 +2,7 @@ mod tangent;
 mod physics;
 mod ergodic;
 mod lyapunov;
-mod camera;
+mod scene;
 
 use std::sync::Arc;
 use winit::{
@@ -17,7 +17,7 @@ use tangent::*;
 use physics::*;
 use ergodic::*;
 use lyapunov::*;
-use camera::*;
+use scene::*;
 
 /* Constants */
 const MAX_HISTORY: usize = 5;

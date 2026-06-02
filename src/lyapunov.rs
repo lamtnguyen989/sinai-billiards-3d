@@ -1,5 +1,5 @@
 use nalgebra::{
-    SMatrix, Matrix6, U6, Const, DimMin,
+    SMatrix, Const, DimMin,
     DefaultAllocator, allocator::Allocator,
     ArrayStorage,
 };
