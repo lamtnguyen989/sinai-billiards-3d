@@ -1,6 +1,7 @@
 mod tangent;
 mod physics;
 mod ergodic;
+mod lyapunov;
 
 use std::sync::Arc;
 use winit::{
@@ -14,6 +15,7 @@ use winit::{
 use tangent::*;
 use physics::*;
 use ergodic::*;
+use lyapunov::*;
 
 /* Constants */
 const MAX_HISTORY: usize = 5;

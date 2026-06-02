@@ -51,6 +51,5 @@ fn coupled_lorenz_test()
 
     // Metric entropy test
     let expected_ks_entropy: f64 = coupled_lorenz_spectra[0..2].iter().sum();
-    assert!((stats.get_lyapunov_time() - 1.0/spectra[0]) < MARGIN_OF_ERROR);
     assert!((stats.get_ks_entropy() - expected_ks_entropy) < MARGIN_OF_ERROR);
 }

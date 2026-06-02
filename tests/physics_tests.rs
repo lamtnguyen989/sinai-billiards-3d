@@ -1,5 +1,7 @@
 use billiards_logic::physics::*;
 use billiards_logic::tangent::*;
+use billiards_logic::lyapunov::*;
+
 use glam::{DVec3, Vec3};
 use nalgebra::{SMatrix};
 use rand::{
