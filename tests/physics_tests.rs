@@ -96,7 +96,7 @@ fn test_random_trajectory_stays_in_box() {
 
     // Run trajectory and check
     for k in 0..STEPS {
-        traj.update(100).unwrap();
+        traj.update(1).unwrap();
         let p = traj.current_pos();
         let v = traj.current_vel();
         assert!(
@@ -116,8 +116,8 @@ fn test_qualitative_trajectory_lya_spectra_properties() {
     let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0]);
 
     // Update trajectory
-    let STEPS = 5000;
-    for k in 0..STEPS {traj.update(10).unwrap();}
+    let STEPS = 10000;
+    for k in 0..STEPS {traj.update(1).unwrap();}
 
     // Testing pairing symmetry
     let MARGIN_OF_ERROR = 5e-4; // Should be enough for rendering purposes
@@ -135,4 +135,8 @@ fn test_qualitative_trajectory_lya_spectra_properties() {
 
     // Test that it is at least chaotic
     assert!(spectra[0] > 0.0, "This ain't chaotic! Leading exponent: {}", spectra[0]);
+
+    // Test the middle exponents should be close to zero
+    assert!(spectra[2].abs() < MARGIN_OF_ERROR && spectra[3].abs() < MARGIN_OF_ERROR, 
+            "Middle exponents not close to zero! Actual values: {} and {}", spectra[2], spectra[3]);
 }

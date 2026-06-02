@@ -226,7 +226,7 @@ impl Trajectory
         let n_sphere: DVec3 = (new_pos - SPHERE_CENTER).as_dvec3() / SPHERE_RADIUS as f64;
 
         // Update 
-        let current_vel = new_vel.as_dvec3();
+        let incoming_vel = vel.as_dvec3();
         if self.positions.len() >= max_history  {self.positions.remove(0);}
         if self.velocities.len() >= max_history {self.velocities.remove(0);}
 
@@ -234,7 +234,7 @@ impl Trajectory
         self.velocities.push(new_vel);
         self.collision_count += 1;
         self.distance_travelled += t as f64;
-        self.lyapunov_spectra.update_spectrum(t as f64, hit_sphere, current_vel, n_wall, n_sphere, self.distance_travelled);
+        self.lyapunov_spectra.update_spectrum(t as f64, hit_sphere, incoming_vel, n_wall, n_sphere, self.distance_travelled);
 
         Ok(())
     }
