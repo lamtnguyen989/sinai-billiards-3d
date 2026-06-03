@@ -33,8 +33,7 @@ jobs:
     - name: Install Slang # If cache miss
       if: steps.slang-cache.outputs.cache-hit != 'true'
       run: |
-        chmod +x .github/slang-setup.sh
-        bash .github/slang-setup.sh
+        chmod +x .github/slang-setup.sh && bash .github/slang-setup.sh
     
     - name: Validate Slang installation
       run: |
