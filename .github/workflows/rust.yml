@@ -9,7 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   SLANG_VERSION: 2026.10.2
-  SLANG_DIR: ~/.local/slang
+  SLANG_DIR: $HOME/.local/slang
 
 jobs:
   build:
