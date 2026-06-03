@@ -39,6 +39,7 @@ jobs:
     - name: Add Slang to PATH
       run: |
         echo "$HOME/.local/slang/bin" >> "$GITHUB_PATH"
+        slangc --version
     
     - name: Compile shaders
       run: |

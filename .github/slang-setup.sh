@@ -14,3 +14,6 @@ curl -L "$URL" -o /tmp/slang.tar.gz
 
 # Unpack slangc binary
 tar -xzf /tmp/slang.tar.gz -C "$INSTALL_DIR" --strip-components=1
+
+# Path resolving after install
+echo "${INSTALL_DIR}/bin" >> "$GITHUB_PATH"
