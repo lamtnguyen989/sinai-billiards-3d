@@ -10,10 +10,11 @@ mkdir -p "$INSTALL_DIR"
 # Download slangc 
 ARCHIVE="slang-${SLANG_VERSION}-linux-x86_64.tar.gz"
 URL="https://github.com/shader-slang/slang/releases/download/v${SLANG_VERSION}/${ARCHIVE}"
-curl -L "$URL" -o /tmp/slang.tar.gz
+curl -fsSL "$URL" -o /tmp/slang.tar.gz
 
 # Unpack slangc binary
 tar -xzf /tmp/slang.tar.gz -C "$INSTALL_DIR" --strip-components=1
 
 # Path resolving after install
 echo "${INSTALL_DIR}/bin" >> "$GITHUB_PATH"
+export PATH="${INSTALL_DIR}/bin:$PATH"

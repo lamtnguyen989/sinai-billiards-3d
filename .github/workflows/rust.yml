@@ -36,7 +36,7 @@ jobs:
         chmod +x .github/slang-setup.sh
         bash .github/slang-setup.sh
     
-    - name: Add Slang to PATH
+    - name: Validate Slang installation
       run: |
         echo "$HOME/.local/slang/bin" >> "$GITHUB_PATH"
         slangc --version
