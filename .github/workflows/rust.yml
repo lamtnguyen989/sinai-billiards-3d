@@ -37,7 +37,6 @@ jobs:
     
     - name: Validate Slang installation
       run: |
-        echo "$HOME/.local/slang/bin" >> "$GITHUB_PATH"
         $HOME/.local/slang/bin/slangc --version
     
     - name: Compile shaders
