@@ -39,7 +39,11 @@ jobs:
     - name: Add Slang to PATH
       run: |
         echo "$HOME/.local/slang/bin" >> "$GITHUB_PATH"
-        slangc --version
+    
+    - name: Compile shaders
+      run: |
+        chmod +x scripts/compile-shaders.sh
+        bash scripts/compile-shaders.sh
 
     - name: Setup Rust
       run: rustup update ${{ matrix.rust_release }} && rustup default ${{ matrix.rust_release }}
