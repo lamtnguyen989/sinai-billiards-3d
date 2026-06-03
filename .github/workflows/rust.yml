@@ -35,13 +35,9 @@ jobs:
       run: |
         chmod +x .github/slang-setup.sh && bash .github/slang-setup.sh
     
-    - name: Validate Slang installation
+    - name: Compile slang shaders source
       run: |
         echo "$HOME/.local/slang" >> $GITHUB_PATH
-        slangc --version
-    
-    - name: Compile shaders
-      run: |
         chmod +x scripts/compile-shaders.sh
         bash scripts/compile-shaders.sh
 
