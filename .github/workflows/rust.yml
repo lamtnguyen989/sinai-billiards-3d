@@ -9,6 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   SLANG_VERSION: 2026.10.2
+  SLANG_DIR: ~/.local/slang
 
 jobs:
   build:
@@ -27,7 +28,7 @@ jobs:
       id: slang-cache
       uses: actions/cache@v5
       with:
-        path: ~/.local/slang
+        path: ${{ env.SLANG_DIR }}
         key: slang-${{ runner.os }}-${{ env.SLANG_VERSION }}
     
     - name: Install Slang # If cache miss
@@ -37,7 +38,7 @@ jobs:
     
     - name: Compile slang shaders source
       run: |
-        echo "$HOME/.local/slang" >> $GITHUB_PATH
+        echo ${{ env.SLANG_DIR }} >> $GITHUB_PATH
         chmod +x scripts/compile-shaders.sh
         bash scripts/compile-shaders.sh
 
