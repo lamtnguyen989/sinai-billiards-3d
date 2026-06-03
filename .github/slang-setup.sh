@@ -16,5 +16,5 @@ curl -fsSL "$URL" -o /tmp/slang.tar.gz
 tar -xzf /tmp/slang.tar.gz -C "$INSTALL_DIR" --strip-components=1
 
 # Path resolving after install
-echo "${INSTALL_DIR}/bin" >> "$GITHUB_PATH"
-export PATH="${INSTALL_DIR}/bin:$PATH"
+echo "${INSTALL_DIR}" >> "$GITHUB_PATH"
+export PATH="${INSTALL_DIR}:$PATH"
