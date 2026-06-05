@@ -29,6 +29,9 @@ use scene::*;
 const MAX_HISTORY: usize = 5;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
 
+/***
+*   System state
+***/
 struct State
 {
     traj:           Trajectory,
@@ -99,6 +102,24 @@ fn trajectory_palette() -> Vec<[f32; 4]> {
     ];
 }
 
+/***
+*   Renderer data
+***/
+struct Renderer
+{
+    // Render pipelines
+    line_pipeline:      wgpu::RenderPipeline,
+    sphere_pipeline:    wgpu::RenderPipeline,
+    box_pipeline:       wgpu::RenderPipeline,
+}
+
+impl Renderer
+{
+    async fn new(window: std::sync::Arc<Window>) -> Self {
+        todo!("Setup the pipelines and render-related things.");
+    }
+}
+
 fn main() {
     // Environment logger
     env_logger::init();
@@ -111,8 +132,17 @@ fn main() {
             Window::default_attributes()
                 .with_title("3D Sinai Billiards Ergodic Dynamics")
                 .with_inner_size(winit::dpi::LogicalSize::new(width, height))
-        )
+        ).unwrap()
     );
 
+    // Setup render pipelines
+    let mut renderer = pollster::block_on(Renderer::new(window.clone()));
+
+    // Setup program states
+    let seed: u64 = 69;
+    let mut program_state = State::new_random(seed);
+
+    // Event loop
+    // event_loop.run();
 }
 

@@ -55,7 +55,7 @@ fn coupled_lorenz_test()
 }
 
 #[test]
-// Testing all zeros stats states for rendering within the rendering
+// Testing all zeros stats states for rendering initializing
 fn empty_stats() {
     // No formal test, just need to make sure that we can initialize empty stats
     let spectra: [f64; NUM_TANGENTS] = [0.0; NUM_TANGENTS];
