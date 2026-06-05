@@ -78,9 +78,14 @@ fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
         positive_count = k + 1;
     }
 
+    // Return early guard for initializing case (spectra = [0.0; N])
+    if positive_count >= lya_spectra.len() {
+        return lya_spectra.len() as f64;
+    }
+
     // All positive sum has no trailing dimension computation
     let neg_point_abs = lya_spectra[positive_count].abs();
-    if positive_count >= lya_spectra.len() || neg_point_abs < 1e-16 {
+    if neg_point_abs < 1e-16 {
         return lya_spectra.len() as f64;
     }
     // Follow the formula from here

@@ -1,5 +1,5 @@
 use billiards_logic::ergodic::*;
-
+use billiards_logic::tangent::{NUM_TANGENTS};
 
 #[test]
 fn wiki_kaplan_yorke() {
@@ -52,4 +52,12 @@ fn coupled_lorenz_test()
     // Metric entropy test
     let expected_ks_entropy: f64 = coupled_lorenz_spectra[0..2].iter().sum();
     assert!((stats.get_ks_entropy() - expected_ks_entropy) < MARGIN_OF_ERROR);
+}
+
+#[test]
+// Testing all zeros stats states for rendering within the rendering
+fn empty_stats() {
+    // No formal test, just need to make sure that we can initialize empty stats
+    let spectra: [f64; NUM_TANGENTS] = [0.0; NUM_TANGENTS];
+    let empty_stats = ErgodicStatistics::new(&spectra);
 }
