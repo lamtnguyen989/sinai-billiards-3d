@@ -15,6 +15,6 @@ curl -fsSL "$URL" -o /tmp/slang.tar.gz
 # Unpack slangc binary
 tar -xzf /tmp/slang.tar.gz -C "$SLANG_DIR" --strip-components=1
 
-# Path resolving after install
+# Add slang to environments
 echo "${SLANG_DIR}" >> "$GITHUB_PATH"
 export PATH="${SLANG_DIR}:$PATH"

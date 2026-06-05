@@ -23,24 +23,12 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - uses: Swatinem/rust-cache@v2.9.1
+    
+    - name: Install Slang
+      run: chmod +x .github/slang-setup.sh && bash .github/slang-setup.sh
 
-    - name: Cache slang
-      id: slang-cache
-      uses: actions/cache@v5
-      with:
-        path: ${{ env.SLANG_DIR }}
-        key: slang-${{ runner.os }}-${{ env.SLANG_VERSION }}
-    
-    - name: Install Slang # If cache miss
-      if: steps.slang-cache.outputs.cache-hit != 'true'
-      run: |
-        chmod +x .github/slang-setup.sh && bash .github/slang-setup.sh
-    
     - name: Compile slang shaders source
-      run: |
-        echo ${{ env.SLANG_DIR }} >> $GITHUB_PATH
-        chmod +x scripts/compile-shaders.sh
-        bash scripts/compile-shaders.sh
+      run: chmod +x scripts/compile-shaders.sh && bash scripts/compile-shaders.sh
 
     - name: Setup Rust
       run: rustup update ${{ matrix.rust_release }} && rustup default ${{ matrix.rust_release }}
