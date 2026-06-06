@@ -7,7 +7,7 @@ use bytemuck::{Pod, Zeroable};
 
 // Scene camera
 #[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
+#[derive(Clone, Copy, Pod, Zeroable, Default)]
 pub struct CameraUniform
 {
     pub view_proj:  [[f32; 4]; 4],
@@ -19,11 +19,13 @@ pub struct CameraUniform
 
 impl CameraUniform
 {
-
+    pub fn new() -> Self {
+        return Self::default();
+    }
 }
 
 // Orbiting data around the sphere center
-#[derive(Default)]
+#[derive(Clone, Copy)]
 pub struct OrbitCamera
 {
     pub target:         Vec3,   // The target coordinate where camera will be orbiting
