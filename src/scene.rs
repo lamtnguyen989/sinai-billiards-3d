@@ -13,7 +13,7 @@ pub struct CameraUniform
     pub view_proj:  [[f32; 4]; 4],
     pub view:       [[f32; 4]; 4],
     pub proj:       [[f32; 4]; 4],
-    pub camera_pos: [f32; 3],
+    pub camera_pos: [f32; 4],
     pub time:       f32,
 }
 
@@ -71,8 +71,19 @@ impl OrbitCamera
     }
 
     // Convert orbit camera data to uniform data
-    pub fn to_uniform() -> CameraUniform {
-        todo!();
+    pub fn to_uniform(&mut self, time: f32) -> CameraUniform {
+        // Position and perspectives
+        let position = self.physical_position();
+        let view = Mat4::look_at_rh(position, self.target, Vec3::Y);
+        let proj = Mat4::perspective_rh(self.fov_y, self.aspect_ratio, 0.01, 100.0);
+
+        return CameraUniform{
+            view_proj:  (view * proj).to_cols_array_2d(),
+            view:       view.to_cols_array_2d(),
+            proj:       proj.to_cols_array_2d(),
+            camera_pos: [position.x, position.y, position.z, 1.0],
+            time:       time
+        };
     }
 }
 
