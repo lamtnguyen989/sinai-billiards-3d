@@ -13,7 +13,13 @@ pub struct CameraUniform
     pub view_proj:  [[f32; 4]; 4],
     pub view:       [[f32; 4]; 4],
     pub proj:       [[f32; 4]; 4],
+    pub camera_pos: [f32; 3],
     pub time:       f32,
+}
+
+impl CameraUniform
+{
+
 }
 
 // Orbiting data around the sphere center
@@ -48,8 +54,23 @@ impl OrbitCamera
         let (cos_yaw, sin_yaw) = (f32::cos(self.yaw), f32::sin(self.yaw));
         let (cos_pitch, sin_pitch) = (f32::cos(self.pitch), f32::sin(self.pitch));
 
-        return Vec3::splat(self.distance)
-                    .mul_add(Vec3::new(cos_pitch*cos_yaw, sin_pitch, cos_pitch*sin_yaw), self.target);
+        let direction = Vec3::new(cos_pitch*cos_yaw, sin_pitch, cos_pitch*sin_yaw);
+        return direction.mul_add(Vec3::splat(self.distance), self.target);
+    }
+
+    // Orbitting mechanism
+    pub fn orbit(&mut self, delta_x: f32, delta_y: f32) {
+        // Hard-coding numerical practicality factors (for now, dynamic way possible? But do I want to bother?)
+        let SENSITIVITY = 0.005;    
+        let radians_range = std::f32::consts::FRAC_PI_2 - SENSITIVITY;
+        
+        self.yaw += SENSITIVITY * delta_x;
+        self.pitch = (self.pitch + delta_y*SENSITIVITY).clamp(-radians_range, radians_range);
+    }
+
+    // Convert orbit camera data to uniform data
+    pub fn to_uniform() -> CameraUniform {
+        todo!();
     }
 }
 
