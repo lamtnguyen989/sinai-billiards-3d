@@ -65,8 +65,8 @@ where
         self.frame.copy_from(&frame_qr_decomp.q());
 
         // Calculate the Lyapunov exponents increments as the natural log of the diagonals of R-matrix (singular values approximation)
-        let r_mat = frame_qr_decomp.r();
-        let increments: [f64; N] = std::array::from_fn(|k| {f64::ln(r_mat[(k,k)].abs().max(1e-16))});
+        let r_matrix = frame_qr_decomp.r();
+        let increments: [f64; N] = std::array::from_fn(|k| {f64::ln(r_matrix[(k,k)].abs().max(1e-16))});
 
         // Update the spectra and phase frame based on computed increments
         for k in 0..N {self.spectrum[k] += (increments[k] - self.spectrum[k]*t) / total_time;}
