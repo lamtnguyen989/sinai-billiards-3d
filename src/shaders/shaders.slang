@@ -1,6 +1,6 @@
-// ==================================================================================
+// ================================================================================== //
 //   Use this Slang shader to compile to WGSL instead of writing WGSL code directly.
-// ==================================================================================
+// ================================================================================== //
 
 // Macros
 #define pointwise_mult(a, b) ((a)*(b))   // Just to make it more clear due to usage on 3D vectors
@@ -82,10 +82,12 @@ SphereVertex sphere_vertex(SphereInput input) {
 
 // Fragement shader
 
-// Since this is an object, we can be silly and add a bunch of lighting shenanigans
+// Since this is an object, we can be silly and add a bunch of lighting shenanigans 
+// Later on, I'll experiment with Ray-tracing
 // Right now, Blinn-Phong + ambient lighting + lambertian diffuse + rim lighting
 
-float3 blinn_phong_specular(float3 rgb_color, float3 light_color, float3 normal_dir, float3 light_dir, float3 view_dir, 
+float3 blinn_phong_specular(float3 rgb_color, float3 normal_dir, float3 view_dir, 
+                            float3 light_color, float3 light_dir, 
                             float3 spec_color, float spec_shininess, float spec_strength) 
 {
     float3 half_way = normalize(light_dir + view_dir);
@@ -105,12 +107,20 @@ float3 lambertian_diffuse(float3 rgb_color, float3 normal_vec, float3 light_dir,
     return lambertian_coeff * rgb_color;
 }
 
-// TODO: Rim-lighting
+[ForceInline]
+float3 rim_lighting(float3 normal_dir, float3 view_dir, 
+                    float3 rim_color, float rim_power, float rim_strength) 
+{
+    float rim_coeff = pow(1.0 - max(dot(normal_dir, view_dir), 0.0), rim_power);
+    return (rim_strength*rim_coeff) * rim_color;
+}
 
 
 [shader("fragment")]
 float4 sphere_fragement(SphereVertex sphere_vertex) {
-    // Sphere base color
+    // Base sphere scene data
+    float3 n = normalize(sphere_vertex.normal);
+    float3 view_dir = normalize(camera.cam_pos.xyz - sphere_vertex.world_pos);
     const float3 SPHERE_RGB = float3(0.45, 0.7, 1.0);
     const float SPHERE_ALPHA = 0.5;
 
@@ -118,30 +128,31 @@ float4 sphere_fragement(SphereVertex sphere_vertex) {
     const float3 LIGHT_COLOR = float3(1.0); // White light
     const float3 LIGHT_DIRECTION = normalize(float3(1.0, 2.0, 1.5));
 
-    // Blinn-Phong parameters
+    // Blinn-Phong reflection lighting
     const float3 SPECULAR_COLOR = float3(1.0);
     const float SPECULAR_SHININESS = 64.0;
     const float SPECULAR_STRENGTH = 0.8;
-
+    float3 bp_specular_light = blinn_phong_specular(SPHERE_RGB, n, view_dir,
+                                                    LIGHT_COLOR, LIGHT_DIRECTION,
+                                                    SPECULAR_COLOR, SPECULAR_SHININESS, SPECULAR_STRENGTH);
 
     // Ambient lighting parameters
     const float AMBIENT_STRENGTH = 0.085;
+    float3 ambient_light = apply_ambient_light(SPHERE_RGB, AMBIENT_STRENGTH);
 
     // Lambertian diffusion parameters
     const float DIFFUSE_STRENGTH = 0.6;
-
-    // Rim-lighting parameters
-
-    // Computing lighting effects
-    float3 n = normalize(sphere_vertex.normal);
-    float3 view_dir = normalize(camera.cam_pos.xyz - sphere_vertex.world_pos);
-    float3 bp_specular_light = blinn_phong_specular(SPHERE_RGB, LIGHT_COLOR, n, LIGHT_DIRECTION, view_dir,
-                                                    SPECULAR_COLOR, SPECULAR_SHININESS, SPECULAR_STRENGTH);
-    float3 ambient_light = apply_ambient_light(SPHERE_RGB, AMBIENT_STRENGTH);
     float3 diffuse = lambertian_diffuse(SPHERE_RGB, n, LIGHT_DIRECTION, DIFFUSE_STRENGTH);
 
-    // Additive lighting
-    return float4(SPHERE_RGB + ambient_light + diffuse, SPHERE_ALPHA);
+    // Rim-lighting
+    const float RIM_STRENGTH = 0.4;
+    const float RIM_POWER = 5.0;
+    float3 RIM_COLOR = float3(0.3, 0.5, 1.0);
+    float3 rim_light = rim_lighting(n, view_dir, RIM_COLOR, RIM_POWER, RIM_STRENGTH);
+    
+
+    // Apply additive lighting for tyhe result
+    return float4(SPHERE_RGB + ambient_light + diffuse + rim_light, SPHERE_ALPHA);
 }
 
 /***
