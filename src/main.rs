@@ -143,7 +143,7 @@ fn main() {
     env_logger::init();
 
     // Setup event loop and window
-    let (width, height): (u32, u32) = (1920, 1080);
+    let (width, height): (u16, u16) = (1920, 1080);
     let event_loop = EventLoop::new().unwrap();
     let window = std::sync::Arc::new(
         event_loop.create_window(
