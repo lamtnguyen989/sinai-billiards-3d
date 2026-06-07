@@ -1,5 +1,4 @@
 use glam::{Mat4, Vec3};
-use bytemuck::{Pod, Zeroable};
 
 /***
 *   Camera and shaders 
@@ -7,7 +6,7 @@ use bytemuck::{Pod, Zeroable};
 
 // Scene camera
 #[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable, Default)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, Default)]
 pub struct CameraUniform
 {
     pub view_proj:  [[f32; 4]; 4],
@@ -67,7 +66,8 @@ impl OrbitCamera
         let radians_range = std::f32::consts::FRAC_PI_2 - SENSITIVITY;
         
         self.yaw += SENSITIVITY * delta_x;
-        self.pitch = (self.pitch + delta_y*SENSITIVITY).clamp(-radians_range, radians_range);
+        self.pitch = (self.pitch + delta_y*SENSITIVITY)
+                        .clamp(-radians_range, radians_range);  // Coupled with the sensitivity for no reason, but fix in prod ig
     }
 
     // Convert orbit camera data to uniform data
@@ -77,7 +77,7 @@ impl OrbitCamera
         let view = Mat4::look_at_rh(position, self.target, Vec3::Y);
         let proj = Mat4::perspective_rh(self.fov_y, self.aspect_ratio, 0.01, 100.0);
 
-        return CameraUniform{
+        return CameraUniform {
             view_proj:  (view * proj).to_cols_array_2d(),
             view:       view.to_cols_array_2d(),
             proj:       proj.to_cols_array_2d(),
@@ -89,7 +89,7 @@ impl OrbitCamera
 
 // Render data: Trajectory line
 #[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct LineData
 {
     pub position:   [f32; 3],
@@ -103,7 +103,7 @@ impl LineData
 
 // Render data: Sphere
 #[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct SphereData
 {
     pub position:   [f32; 3],
@@ -120,7 +120,7 @@ impl SphereData
 
 // Render data: Box
 #[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct BoxData
 {
     pub position:   [f32; 3],

@@ -8,6 +8,7 @@ struct CameraUniform_std140_0
     @align(16) view_proj_0 : _MatrixStorage_float4x4_ColMajorstd140_0,
     @align(16) view_0 : _MatrixStorage_float4x4_ColMajorstd140_0,
     @align(16) proj_0 : _MatrixStorage_float4x4_ColMajorstd140_0,
+    @align(16) cam_pos_0 : vec4<f32>,
     @align(16) time_0 : f32,
 };
 
@@ -73,10 +74,29 @@ fn sphere_vertex( _S4 : vertexInput_1) -> SphereVertex_0
     return output_2;
 }
 
+struct pixelOutput_1
+{
+    @location(0) output_3 : vec4<f32>,
+};
+
+struct pixelInput_1
+{
+    @location(0) world_pos_1 : vec3<f32>,
+    @location(1) normal_2 : vec3<f32>,
+};
+
+@fragment
+fn sphere_fragement( _S5 : pixelInput_1, @builtin(position) clip_pos_3 : vec4<f32>) -> pixelOutput_1
+{
+    const SPHERE_RGB_0 : vec3<f32> = vec3<f32>(0.44999998807907104f, 0.69999998807907104f, 1.0f);
+    var _S6 : pixelOutput_1 = pixelOutput_1( vec4<f32>(SPHERE_RGB_0 + vec3<f32>(0.08500000089406967f) * SPHERE_RGB_0 + vec3<f32>(max(dot(normalize(_S5.normal_2), normalize(vec3<f32>(1.0f, 2.0f, 1.5f))), 0.0f)) * SPHERE_RGB_0, 0.5f) );
+    return _S6;
+}
+
 struct BoxVertex_0
 {
-    @builtin(position) clip_pos_3 : vec4<f32>,
-    @location(0) world_pos_1 : vec3<f32>,
+    @builtin(position) clip_pos_4 : vec4<f32>,
+    @location(0) world_pos_2 : vec3<f32>,
     @location(1) color_3 : vec4<f32>,
 };
 
@@ -87,30 +107,30 @@ struct vertexInput_2
 };
 
 @vertex
-fn box_vertex( _S5 : vertexInput_2) -> BoxVertex_0
+fn box_vertex( _S7 : vertexInput_2) -> BoxVertex_0
 {
-    var output_3 : BoxVertex_0;
-    output_3.clip_pos_3 = (((vec4<f32>(_S5.position_2, 1.0f)) * (mat4x4<f32>(camera_0.view_proj_0.data_0[i32(0)][i32(0)], camera_0.view_proj_0.data_0[i32(1)][i32(0)], camera_0.view_proj_0.data_0[i32(2)][i32(0)], camera_0.view_proj_0.data_0[i32(3)][i32(0)], camera_0.view_proj_0.data_0[i32(0)][i32(1)], camera_0.view_proj_0.data_0[i32(1)][i32(1)], camera_0.view_proj_0.data_0[i32(2)][i32(1)], camera_0.view_proj_0.data_0[i32(3)][i32(1)], camera_0.view_proj_0.data_0[i32(0)][i32(2)], camera_0.view_proj_0.data_0[i32(1)][i32(2)], camera_0.view_proj_0.data_0[i32(2)][i32(2)], camera_0.view_proj_0.data_0[i32(3)][i32(2)], camera_0.view_proj_0.data_0[i32(0)][i32(3)], camera_0.view_proj_0.data_0[i32(1)][i32(3)], camera_0.view_proj_0.data_0[i32(2)][i32(3)], camera_0.view_proj_0.data_0[i32(3)][i32(3)]))));
-    output_3.world_pos_1 = _S5.position_2;
-    output_3.color_3 = _S5.color_4;
-    return output_3;
+    var output_4 : BoxVertex_0;
+    output_4.clip_pos_4 = (((vec4<f32>(_S7.position_2, 1.0f)) * (mat4x4<f32>(camera_0.view_proj_0.data_0[i32(0)][i32(0)], camera_0.view_proj_0.data_0[i32(1)][i32(0)], camera_0.view_proj_0.data_0[i32(2)][i32(0)], camera_0.view_proj_0.data_0[i32(3)][i32(0)], camera_0.view_proj_0.data_0[i32(0)][i32(1)], camera_0.view_proj_0.data_0[i32(1)][i32(1)], camera_0.view_proj_0.data_0[i32(2)][i32(1)], camera_0.view_proj_0.data_0[i32(3)][i32(1)], camera_0.view_proj_0.data_0[i32(0)][i32(2)], camera_0.view_proj_0.data_0[i32(1)][i32(2)], camera_0.view_proj_0.data_0[i32(2)][i32(2)], camera_0.view_proj_0.data_0[i32(3)][i32(2)], camera_0.view_proj_0.data_0[i32(0)][i32(3)], camera_0.view_proj_0.data_0[i32(1)][i32(3)], camera_0.view_proj_0.data_0[i32(2)][i32(3)], camera_0.view_proj_0.data_0[i32(3)][i32(3)]))));
+    output_4.world_pos_2 = _S7.position_2;
+    output_4.color_3 = _S7.color_4;
+    return output_4;
 }
 
-struct pixelOutput_1
+struct pixelOutput_2
 {
-    @location(0) output_4 : vec4<f32>,
+    @location(0) output_5 : vec4<f32>,
 };
 
-struct pixelInput_1
+struct pixelInput_2
 {
-    @location(0) world_pos_2 : vec3<f32>,
+    @location(0) world_pos_3 : vec3<f32>,
     @location(1) color_5 : vec4<f32>,
 };
 
 @fragment
-fn box_color( _S6 : pixelInput_1, @builtin(position) clip_pos_4 : vec4<f32>) -> pixelOutput_1
+fn box_color( _S8 : pixelInput_2, @builtin(position) clip_pos_5 : vec4<f32>) -> pixelOutput_2
 {
-    var _S7 : pixelOutput_1 = pixelOutput_1( _S6.color_5 );
-    return _S7;
+    var _S9 : pixelOutput_2 = pixelOutput_2( _S8.color_5 );
+    return _S9;
 }
 
