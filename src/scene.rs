@@ -6,7 +6,7 @@ use glam::{Mat4, Vec3};
 
 // Scene camera
 #[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, Default)]
+#[derive(Clone, Copy, Default, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform
 {
     pub view_proj:  [[f32; 4]; 4],
@@ -107,7 +107,7 @@ impl LineData
 pub struct SphereData
 {
     pub position:   [f32; 3],
-    pub color:      [f32; 4],
+    pub normal:     [f32; 3],
 }
 
 impl SphereData
@@ -124,7 +124,6 @@ impl SphereData
 pub struct BoxData
 {
     pub position:   [f32; 3],
-    pub color:      [f32; 4],
 }
 
 impl BoxData

@@ -34,7 +34,7 @@ const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering fram
 /***
 *   System state
 ***/
-struct State
+struct AppState
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
@@ -43,7 +43,7 @@ struct State
     paused:         bool
 }
 
-impl State
+impl AppState
 {
     // Constructors
     fn new_random(seed: u64) -> Self {
@@ -125,6 +125,13 @@ fn trajectory_palette() -> Vec<[f32; 4]> {
 ***/
 struct Renderer
 {
+    // GPU context
+    surface:            wgpu::Surface<'static>,
+    device:             wgpu::Device,
+    queue:              wgpu::Queue,
+    config:             wgpu::SurfaceConfiguration,
+    size:               winit::dpi::PhysicalSize<u16>,
+
     // Render pipelines
     line_pipeline:      wgpu::RenderPipeline,
     sphere_pipeline:    wgpu::RenderPipeline,
@@ -134,6 +141,52 @@ struct Renderer
 impl Renderer
 {
     async fn new(window: std::sync::Arc<Window>) -> Self {
+        // Creating wgpu instance 
+        let instance = wgpu::Instance::default();
+        let surface = instance.create_surface(window.clone()).unwrap();
+        let adapter = instance.request_adapter(
+            &wgpu::RequestAdapterOptions {
+                power_preference:       wgpu::PowerPreference::HighPerformance,
+                compatible_surface:     Some(&surface),
+                force_fallback_adapter: false
+            }
+        ).await.unwrap();
+
+        // Creating a wgpu logical device and queue
+        let (device, queue) = adapter.request_device(
+            &wgpu::DeviceDescriptor {
+                label:                  None,
+                required_features:      wgpu::Features::default(),
+                required_limits:        wgpu::Limits::default(),
+                experimental_features:  wgpu::ExperimentalFeatures::default(),
+                memory_hints:           wgpu::MemoryHints::Performance,
+                trace:                  wgpu::Trace::Off,
+            }
+        ).await.unwrap();
+
+        // Surface configuration
+        let size = window.inner_size();
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_texture_format = surface_capabilities.formats.iter()
+                                        .find(|f| {**f == wgpu::TextureFormat::Rgba16Float}).copied()   // HDR rendering capabilities first
+                                        .or_else(|| surface_capabilities.formats.iter()
+                                                        .find(|f| {f.is_srgb()}).copied())              // Standard RGB if no HDR
+                                        .unwrap_or(surface_capabilities.formats[0]);                    // Fall back to hardware capabilities
+
+        let config = wgpu::SurfaceConfiguration {
+            usage:                          wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format:                         surface_texture_format,
+            width:                          size.width,
+            height:                         size.height,
+            present_mode:                   wgpu::PresentMode::AutoVsync,
+            desired_maximum_frame_latency:  2,
+            alpha_mode:                     surface_capabilities.alpha_modes[0],
+            view_formats:                   vec![],
+        };
+        surface.configure(&device, &config);
+
+        // TODO: Shader module load and render pipelines setup
+
         todo!("Setup the pipelines and render-related things.");
     }
 }
@@ -143,7 +196,7 @@ fn main() {
     env_logger::init();
 
     // Setup event loop and window
-    let (width, height): (u16, u16) = (1920, 1080);
+    let (width, height): (u32, u32) = (1920, 1080);
     let event_loop = EventLoop::new().unwrap();
     let window = std::sync::Arc::new(
         event_loop.create_window(
@@ -158,7 +211,7 @@ fn main() {
 
     // Setup program states (random)
     let seed: u64 = 69;
-    let mut program_state = State::new_random(seed);
+    let mut program_state = AppState::new_random(seed);
 
     // Event loop
     // event_loop.run();
