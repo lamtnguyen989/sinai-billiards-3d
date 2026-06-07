@@ -130,7 +130,8 @@ struct Renderer
     device:             wgpu::Device,
     queue:              wgpu::Queue,
     config:             wgpu::SurfaceConfiguration,
-    size:               winit::dpi::PhysicalSize<u16>,
+    size:               winit::dpi::PhysicalSize<u32>,
+    depth_view:         wgpu::TextureView,
 
     // Render pipelines
     line_pipeline:      wgpu::RenderPipeline,
@@ -142,7 +143,15 @@ impl Renderer
 {
     async fn new(window: std::sync::Arc<Window>) -> Self {
         // Creating wgpu instance 
-        let instance = wgpu::Instance::default();
+        let instance = wgpu::Instance::new(
+            wgpu::InstanceDescriptor {
+                backends:                   wgpu::Backends::PRIMARY,
+                flags:                      wgpu::InstanceFlags::default(), // Apparently, this calls VALIDATION_INDIRECT_CALL flag and not empty()
+                memory_budget_thresholds:   wgpu::MemoryBudgetThresholds::default(),
+                backend_options:            wgpu::BackendOptions::default(),
+                display:                    None,
+            }
+        );
         let surface = instance.create_surface(window.clone()).unwrap();
         let adapter = instance.request_adapter(
             &wgpu::RequestAdapterOptions {
@@ -185,10 +194,54 @@ impl Renderer
         };
         surface.configure(&device, &config);
 
-        // TODO: Shader module load and render pipelines setup
+        // Depth texture view
+        let depth_texture_view = make_depth_texture_view(&device, size.width, size.height);
+
+        // Load shader file as a module
+        let shader = device.create_shader_module(
+            wgpu::ShaderModuleDescriptor {
+                label:  Some("WGSL shaders"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shaders.wgsl").into()),
+            }
+        );
+
+        // Create bindings for CameraUniform
+
+        // Layout of the rendering pipelines
+
+        // Writing all of the rendering pipelines
+
 
         todo!("Setup the pipelines and render-related things.");
     }
+}
+
+
+fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
+    let size_extent = wgpu::Extent3d {
+        width:                  width,
+        height:                 height,
+        depth_or_array_layers:  1
+    };
+
+    let depth_texture = device.create_texture(
+        &wgpu::TextureDescriptor {
+            label:              Some("Depth View texture"),
+            size:               size_extent,
+            mip_level_count:    1,
+            sample_count:       1,
+            dimension:          wgpu::TextureDimension::D2,
+            format:             wgpu::TextureFormat::Depth32Float,
+            usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats:       &[],
+        }
+    );
+
+    let depth_texture_view = depth_texture.create_view(
+        &wgpu::TextureViewDescriptor::default() // TODO: Read docs and flesh this out
+    );
+
+    return depth_texture_view;
 }
 
 fn main() {
