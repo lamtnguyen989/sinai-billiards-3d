@@ -151,7 +151,7 @@ fn phase_tangent_wall_reflect(tpv: TangentPhaseVector, n: DVec3) -> TangentPhase
 
 // Sphere reflection perturbation
 // TODO: Explain the mathematical mess of the derivation
-fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n: DVec3, r: f64) -> TangentPhaseVector 
+fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, incoming_momentum: DVec3, n: DVec3, r: f64) -> TangentPhaseVector 
 {
     let tpv_position: DVec3 = tpv.get_position_tangent();
     let tpv_momentum: DVec3 = tpv.get_momentum_tangent();
@@ -159,10 +159,10 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, curr_momentum: DVec3, n
     let pos_reflection: DVec3 = tpv_position - (2.0 * tpv_position.dot(n))*n;  
     let mom_reflection: DVec3 = tpv_momentum - (2.0 * tpv_momentum.dot(n))*n;
 
-    let sphere_correction:DVec3 = curr_momentum.dot(n) * tpv_position 
-                                - tpv_position.dot(n) * curr_momentum 
-                                + curr_momentum.dot(tpv_position) * n
-                                - (curr_momentum.dot(curr_momentum) / curr_momentum.dot(n)) * (tpv_position.dot(n)) * n;
+    let sphere_correction:DVec3 = incoming_momentum.dot(n) * tpv_position 
+                                - tpv_position.dot(n) * incoming_momentum 
+                                + incoming_momentum.dot(tpv_position) * n
+                                - (incoming_momentum.dot(incoming_momentum) / incoming_momentum.dot(n)) * (tpv_position.dot(n)) * n;
 
     return TangentPhaseVector::new(pos_reflection, mom_reflection - 2.0/r*sphere_correction);
 }

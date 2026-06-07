@@ -76,11 +76,11 @@ SphereVertex sphere_vertex(SphereInput input) {
     return output;
 }
 
-/*
+/* TODO
 // Fragement shader
 [shader("fragment")]
-float4 sphere_fragement(SphereVertexOut sphere_vertex) {
-    // TODO: Cool colors go here
+float4 sphere_fragement(SphereVertex sphere_vertex) {
+    float3 n = normalize(sphere_vertex.normal);
 }
 */
 

@@ -19,6 +19,8 @@ use rand::{
     rngs::StdRng
 };
 
+use glam::{Vec3, DVec3};
+
 use tangent::*;
 use physics::*;
 use ergodic::*;
@@ -29,11 +31,14 @@ use scene::*;
 const MAX_HISTORY: usize = 5;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
 
+/***
+*   System state
+***/
 struct State
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
-    frame:          u64,
+    frame_counter:  u64,
     trail_length:   usize,
     paused:         bool
 }
@@ -49,7 +54,7 @@ impl State
         return Self {
             traj:           random_trajectory(&mut rng, color),
             stats:          ErgodicStats::new(&[0.0; NUM_TANGENTS]),
-            frame:          0,
+            frame_counter:  0,
             trail_length:   MAX_HISTORY,
             paused:         true
         };
@@ -61,7 +66,7 @@ impl State
     }
     */
 
-    // Update mechanism
+    // Update mechanisms
     fn update(&mut self) -> () {
         // Do nothing on paused
         if self.paused {return;}
@@ -76,7 +81,23 @@ impl State
 
         // Compute resulting stats
         self.stats = ErgodicStats::compute_from_trajectory(&self.traj);
-        self.frame += 1;
+        self.frame_counter += 1;
+    }
+
+    // Reset mechanisms
+    fn reset(&mut self) -> () {
+        todo!();
+    }
+
+    fn reset_from(&mut self, pos: Vec3, vel: Vec3) -> () {
+        // Pick a new color from palllete
+        let palette = trajectory_palette();
+        let color = palette[(self.frame_counter as usize) % palette.len()];
+
+        // Reset internal states
+        self.traj = Trajectory::new(pos, vel, color);
+        self.stats = ErgodicStats::new(&[0.0; NUM_TANGENTS]);
+        self.frame_counter = 0;
     }
     
 }
@@ -99,6 +120,24 @@ fn trajectory_palette() -> Vec<[f32; 4]> {
     ];
 }
 
+/***
+*   Renderer data
+***/
+struct Renderer
+{
+    // Render pipelines
+    line_pipeline:      wgpu::RenderPipeline,
+    sphere_pipeline:    wgpu::RenderPipeline,
+    box_pipeline:       wgpu::RenderPipeline,
+}
+
+impl Renderer
+{
+    async fn new(window: std::sync::Arc<Window>) -> Self {
+        todo!("Setup the pipelines and render-related things.");
+    }
+}
+
 fn main() {
     // Environment logger
     env_logger::init();
@@ -111,8 +150,17 @@ fn main() {
             Window::default_attributes()
                 .with_title("3D Sinai Billiards Ergodic Dynamics")
                 .with_inner_size(winit::dpi::LogicalSize::new(width, height))
-        )
+        ).unwrap()
     );
 
+    // Setup render pipelines
+    let mut renderer = pollster::block_on(Renderer::new(window.clone()));
+
+    // Setup program states (random)
+    let seed: u64 = 69;
+    let mut program_state = State::new_random(seed);
+
+    // Event loop
+    // event_loop.run();
 }
 
