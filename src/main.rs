@@ -195,7 +195,7 @@ impl Renderer
         surface.configure(&device, &config);
 
         // Depth texture view
-        let depth_texture_view = make_depth_texture_view(&device, size.width, size.height);
+        let depth_texture_view: wgpu::TextureView = make_depth_texture_view(&device, size.width, size.height);
 
         // Load shader file as a module
         let shaders: wgpu::ShaderModule  = device.create_shader_module(
@@ -276,7 +276,7 @@ impl Renderer
                                     stencil:                wgpu::StencilState::default(),
                                     bias:                   wgpu::DepthBiasState::default(),
                                 }),
-                multisample:    wgpu::MultisampleState::default(),
+                multisample:    wgpu::MultisampleState {count: 2, mask: !0, alpha_to_coverage_enabled: false,},  // 2x MSAA for the LOLs
                 fragment:       Some(wgpu::FragmentState {
                                     module:                  &shaders,
                                     entry_point:            Some("fragment_line"),
@@ -294,24 +294,105 @@ impl Renderer
         );
 
         // Sphere pipeline
+        let sphere_pipeline: wgpu::RenderPipeline = device.create_render_pipeline(
+            &wgpu::RenderPipelineDescriptor {
+                label:          wgpu::Label::Some("Sphere render pipeline"),
+                layout:         Some(&pipeline_layout),
+                vertex:         wgpu::VertexState {
+                                    module: &shaders,
+                                    entry_point: Some("vertex_sphere"),
+                                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                                    buffers: &[SphereData::desc()]
+                                },
+                primitive:      wgpu::PrimitiveState {
+                                    topology:           wgpu::PrimitiveTopology::TriangleList,
+                                    strip_index_format: Option::<wgpu::IndexFormat>::default(),
+                                    front_face:         wgpu::FrontFace::default(),
+                                    cull_mode:          Some(wgpu::Face::Back), // Leveraging the fact that spheres are symmetric and we only view the front
+                                    unclipped_depth:    false,
+                                    polygon_mode:       wgpu::PolygonMode::default(),
+                                    conservative:       false,
+                                },
+                depth_stencil:  Some(wgpu::DepthStencilState {
+                                    format:                 wgpu::TextureFormat::Depth32Float,
+                                    depth_write_enabled:    Some(false),    // This is because the sphere is translucent
+                                    depth_compare:          Some(wgpu::CompareFunction::Less),
+                                    stencil:                wgpu::StencilState::default(),
+                                    bias:                   wgpu::DepthBiasState::default(),
+                                }),
+                multisample:    wgpu::MultisampleState {count: 2, mask: !0, alpha_to_coverage_enabled: false,},  // 2x MSAA for the LOLs
+                fragment:       Some(wgpu::FragmentState {
+                                    module:                  &shaders,
+                                    entry_point:            Some("fragment_sphere"),
+                                    compilation_options:    wgpu::PipelineCompilationOptions::default(),
+                                    targets:                &[Some(wgpu::ColorTargetState {
+                                                                    format:     surface_texture_format,
+                                                                    blend:      Some(wgpu::BlendState::ALPHA_BLENDING),
+                                                                    write_mask: wgpu::ColorWrites::ALL,
+                                                                }),
+                                                            ],
+                                }),
+                multiview_mask: None,
+                cache:          None,
+            }
+        );
 
         // Box pipeline
+        let box_pipeline: wgpu::RenderPipeline = device.create_render_pipeline(
+            &wgpu::RenderPipelineDescriptor {
+                label:          wgpu::Label::Some("Box render pipeline"),
+                layout:         Some(&pipeline_layout),
+                vertex:         wgpu::VertexState {
+                                    module: &shaders,
+                                    entry_point: Some("vertex_box"),
+                                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                                    buffers: &[LineData::desc()]
+                                },
+                primitive:      wgpu::PrimitiveState {
+                                    topology:           wgpu::PrimitiveTopology::LineList,
+                                    strip_index_format: Option::<wgpu::IndexFormat>::default(),
+                                    front_face:         wgpu::FrontFace::default(),
+                                    cull_mode:          Option::<wgpu::Face>::default(),
+                                    unclipped_depth:    false,
+                                    polygon_mode:       wgpu::PolygonMode::default(),
+                                    conservative:       false,
+                                },
+                depth_stencil:  Some(wgpu::DepthStencilState {
+                                    format:                 wgpu::TextureFormat::Depth32Float,
+                                    depth_write_enabled:    Some(true),
+                                    depth_compare:          Some(wgpu::CompareFunction::Less),
+                                    stencil:                wgpu::StencilState::default(),
+                                    bias:                   wgpu::DepthBiasState::default(),
+                                }),
+                multisample:    wgpu::MultisampleState::default(),
+                fragment:       Some(wgpu::FragmentState {
+                                    module:                  &shaders,
+                                    entry_point:            Some("fragment_box"),
+                                    compilation_options:    wgpu::PipelineCompilationOptions::default(),
+                                    targets:                &[Some(wgpu::ColorTargetState {
+                                                                    format:     surface_texture_format,
+                                                                    blend:      Some(wgpu::BlendState::ALPHA_BLENDING),
+                                                                    write_mask: wgpu::ColorWrites::ALL,
+                                                                }),
+                                                            ],
+                                }),
+                multiview_mask: None,
+                cache:          None,
+            }
+        );
 
+        return Self {
+            surface:            surface,
+            device:             device,
+            queue:              queue,
+            config:             config,
+            size:               size,
+            depth_texture_view: depth_texture_view,
 
-        todo!("Setup the pipelines and render-related things.");
-
-        // return Self {
-        //     surface:            surface,
-        //     device:             device,
-        //     queue:              queue,
-        //     config:             config,
-        //     size:               size,
-        //     depth_texture_view: depth_texture_view,
-
-        //     line_pipeline:      line_pipeline,
-        //     sphere_pipeline:    wgpu::RenderPipeline,
-        //     box_pipeline:       wgpu::RenderPipeline,
-        // }
+            line_pipeline:      line_pipeline,
+            sphere_pipeline:    sphere_pipeline,
+            box_pipeline:       box_pipeline,
+        }
     }
 }
 
