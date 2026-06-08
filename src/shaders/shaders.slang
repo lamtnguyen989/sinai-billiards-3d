@@ -26,6 +26,7 @@ struct LineInput
 {
     float3 position : POSITION;
     float4 color    : COLOR;
+    float age       : TEXTCOORD0;
 };
 
 // Processed vertex data for trajectory line
@@ -33,6 +34,7 @@ struct LineVertex
 {
     float4 clip_pos : SV_Position;
     float4 color    : COLOR;
+    float  age      : TEXCOORD0;
 };
 
 // Vertex shader
@@ -41,14 +43,17 @@ LineVertex vertex_line(LineInput input) {
     LineVertex output;
     output.clip_pos = mul(camera.view_proj, float4(input.position, 1.0));
     output.color = input.color;
+    output.age = input.age;
 
     return output;
 }
 
 // Fragment shader
 [shader("fragment")]
-float4 fragment_line(LineVertex line_vertex): SV_Target {
-    return line_vertex.color;
+float4 fragment_line(LineVertex input): SV_Target {
+    // Fade older lines based on the age
+    float aged_alpha = input.color.a * (0.15 + 0.85 * input.age);
+    return float4((0.5 + 0.5 * input.age)*input.color.rgb, aged_alpha);
 }
 
 /***
@@ -72,7 +77,7 @@ struct SphereVertex
 
 // Vertex shader
 [shader("vertex")]
-SphereVertex sphere_vertex(SphereInput input) {
+SphereVertex vertex_sphere(SphereInput input) {
     SphereVertex output;
     output.clip_pos = mul(camera.view_proj, float4(input.position, 1.0));
     output.world_pos = input.position;
@@ -117,7 +122,7 @@ float3 rim_lighting(float3 normal_dir, float3 view_dir,
 
 
 [shader("fragment")]
-float4 sphere_fragement(SphereVertex input) {
+float4 fragment_sphere(SphereVertex input) {
     // Base sphere scene data
     float3 n = normalize(input.normal);
     float3 view_dir = normalize(camera.cam_pos.xyz - input.world_pos);
@@ -163,7 +168,6 @@ float4 sphere_fragement(SphereVertex input) {
 struct BoxInput
 {
     float3 position : POSITION;
-    float4 color    : COLOR;
 };
 
 // Vertex shader output data for box
@@ -171,20 +175,19 @@ struct BoxVertex
 {
     float4 clip_pos : SV_Position;
     float3 world_pos: TEXCOORD0;
-    float4 color    : COLOR;
 };
 
 // Vertex shader
 [shader("vertex")]
-BoxVertex box_vertex(BoxInput input) {
+BoxVertex vertex_box(BoxInput input) {
     BoxVertex output;
     output.clip_pos = mul(camera.view_proj, float4(input.position, 1.0));
     output.world_pos = input.position;
-    output.color = input.color;
     return output;
 }
 
 [shader("fragment")]
-float4 box_color(BoxVertex input) {
-    return input.color;
+float4 fragment_box(BoxVertex input) {
+    // Hard-code Box color
+    return float4(0.35, 0.45, 0.55, 0.4);
 }
