@@ -1,5 +1,5 @@
 // ================================================================================== //
-//   Use this Slang shader to compile to WGSL instead of writing WGSL code directly.
+//   Use this Slang shader to compile to WGSL instead of writing WGSL code directly.  //
 // ================================================================================== //
 
 // Macros
@@ -82,10 +82,10 @@ SphereVertex sphere_vertex(SphereInput input) {
 
 // Fragement shader
 
-// Since this is an object, we can be silly and add a bunch of lighting shenanigans 
+// Since this is an object, we can be silly and add a bunch of lighting shenanigans
 // Later on, I'll experiment with Ray-tracing
 // Right now, Blinn-Phong + ambient lighting + lambertian diffuse + rim lighting
-
+[ForceInline]
 float3 blinn_phong_specular(float3 rgb_color, float3 normal_dir, float3 view_dir, 
                             float3 light_color, float3 light_dir, 
                             float3 spec_color, float spec_shininess, float spec_strength) 
@@ -117,10 +117,10 @@ float3 rim_lighting(float3 normal_dir, float3 view_dir,
 
 
 [shader("fragment")]
-float4 sphere_fragement(SphereVertex sphere_vertex) {
+float4 sphere_fragement(SphereVertex input) {
     // Base sphere scene data
-    float3 n = normalize(sphere_vertex.normal);
-    float3 view_dir = normalize(camera.cam_pos.xyz - sphere_vertex.world_pos);
+    float3 n = normalize(input.normal);
+    float3 view_dir = normalize(camera.cam_pos.xyz - input.world_pos);
     const float3 SPHERE_RGB = float3(0.45, 0.7, 1.0);
     const float SPHERE_ALPHA = 0.5;
 
