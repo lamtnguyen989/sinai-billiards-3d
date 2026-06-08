@@ -94,12 +94,21 @@ pub struct LineData
 {
     pub position:   [f32; 3],
     pub color:      [f32; 4],
+    pub age:        f32,
 }
 
 impl LineData
 {
-    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
-        todo!()
+    pub fn to_vertex_buffer_layout() -> wgpu::VertexBufferLayout<'static> {
+        return wgpu::VertexBufferLayout {
+            array_stride:   std::mem::size_of::<LineData>() as wgpu::BufferAddress, // This shi is just u64 
+            step_mode:      wgpu::VertexStepMode::Vertex,
+            attributes:     &[  
+                                wgpu::VertexAttribute {format: wgpu::VertexFormat::Float32x3, offset: 0, shader_location: 0},
+                                wgpu::VertexAttribute {format: wgpu::VertexFormat::Float32x4, offset: 12, shader_location: 1},
+                                wgpu::VertexAttribute {format: wgpu::VertexFormat::Float32, offset: 28, shader_location: 2},
+                            ],
+        }
     }
 }
 
@@ -114,8 +123,15 @@ pub struct SphereData
 
 impl SphereData
 {
-    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
-        todo!()
+    pub fn to_vertex_buffer_layout() -> wgpu::VertexBufferLayout<'static> {
+        return wgpu::VertexBufferLayout {
+            array_stride:   std::mem::size_of::<SphereData>() as wgpu::BufferAddress,
+            step_mode:      wgpu::VertexStepMode::Vertex,
+            attributes:     &[  
+                                wgpu::VertexAttribute {format: wgpu::VertexFormat::Float32x3, offset: 0, shader_location: 0},
+                                wgpu::VertexAttribute {format: wgpu::VertexFormat::Float32x3, offset: 12, shader_location: 1},
+                            ],
+        }
     }
 }
 
@@ -130,7 +146,13 @@ pub struct BoxData
 
 impl BoxData
 {
-    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
-        todo!()
+    pub fn to_vertex_buffer_layout() -> wgpu::VertexBufferLayout<'static> {
+        return wgpu::VertexBufferLayout {
+            array_stride:   std::mem::size_of::<BoxData>() as wgpu::BufferAddress,
+            step_mode:      wgpu::VertexStepMode::Vertex,
+            attributes:     &[  
+                                wgpu::VertexAttribute {format: wgpu::VertexFormat::Float32x3, offset: 0, shader_location: 0},
+                            ],
+        }
     }
 }

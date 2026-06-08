@@ -258,7 +258,7 @@ impl Renderer
                                     module: &shaders,
                                     entry_point: Some("vertex_line"),
                                     compilation_options: wgpu::PipelineCompilationOptions::default(),
-                                    buffers: &[LineData::desc()]
+                                    buffers: &[LineData::to_vertex_buffer_layout()]
                                 },
                 primitive:      wgpu::PrimitiveState {
                                     topology:           wgpu::PrimitiveTopology::LineList,
@@ -276,7 +276,7 @@ impl Renderer
                                     stencil:                wgpu::StencilState::default(),
                                     bias:                   wgpu::DepthBiasState::default(),
                                 }),
-                multisample:    wgpu::MultisampleState {count: 2, mask: !0, alpha_to_coverage_enabled: false,},  // 2x MSAA for the LOLs
+                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},  // MSAA for the LOLs
                 fragment:       Some(wgpu::FragmentState {
                                     module:                  &shaders,
                                     entry_point:            Some("fragment_line"),
@@ -302,7 +302,7 @@ impl Renderer
                                     module: &shaders,
                                     entry_point: Some("vertex_sphere"),
                                     compilation_options: wgpu::PipelineCompilationOptions::default(),
-                                    buffers: &[SphereData::desc()]
+                                    buffers: &[SphereData::to_vertex_buffer_layout()]
                                 },
                 primitive:      wgpu::PrimitiveState {
                                     topology:           wgpu::PrimitiveTopology::TriangleList,
@@ -320,7 +320,7 @@ impl Renderer
                                     stencil:                wgpu::StencilState::default(),
                                     bias:                   wgpu::DepthBiasState::default(),
                                 }),
-                multisample:    wgpu::MultisampleState {count: 2, mask: !0, alpha_to_coverage_enabled: false,},  // 2x MSAA for the LOLs
+                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},  // 2x MSAA for the LOLs
                 fragment:       Some(wgpu::FragmentState {
                                     module:                  &shaders,
                                     entry_point:            Some("fragment_sphere"),
@@ -346,7 +346,7 @@ impl Renderer
                                     module: &shaders,
                                     entry_point: Some("vertex_box"),
                                     compilation_options: wgpu::PipelineCompilationOptions::default(),
-                                    buffers: &[LineData::desc()]
+                                    buffers: &[LineData::to_vertex_buffer_layout()]
                                 },
                 primitive:      wgpu::PrimitiveState {
                                     topology:           wgpu::PrimitiveTopology::LineList,
