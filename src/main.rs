@@ -241,6 +241,13 @@ impl Renderer
         );
 
         // Layout of the rendering pipelines
+        let pipeline_layout = device.create_pipeline_layout(
+            &wgpu::PipelineLayoutDescriptor {
+                label:              Some("Pipeline Layout"),
+                bind_group_layouts: &[Some(&cam_bgl)],
+                immediate_size:     0
+            }
+        );
 
         // Writing all of the rendering pipelines
 
