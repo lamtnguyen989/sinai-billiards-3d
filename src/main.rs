@@ -131,7 +131,10 @@ struct Renderer
     queue:              wgpu::Queue,
     config:             wgpu::SurfaceConfiguration,
     size:               winit::dpi::PhysicalSize<u32>,
+
+    // Texture Views (doing MSAA for the LOLs)
     depth_texture_view: wgpu::TextureView,
+    msaa_resolver:      wgpu::TextureView,
 
     // Render pipelines
     line_pipeline:      wgpu::RenderPipeline,
@@ -196,6 +199,20 @@ impl Renderer
 
         // Depth texture view
         let depth_texture_view: wgpu::TextureView = make_depth_texture_view(&device, size.width, size.height);
+
+        // MSAA texture view
+        let msaa_resolve_texture: wgpu::TextureView = device.create_texture(
+            &wgpu::TextureDescriptor {
+                label:              Some("MSAA intermediate texture"),
+                size:               wgpu::Extent3d {width: size.width, height: size.height, depth_or_array_layers: 1},
+                mip_level_count:    1,
+                sample_count:       4,
+                dimension:          wgpu::TextureDimension::D2,
+                format:             surface_texture_format,
+                usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats:       &[],
+            }
+        ).create_view(&wgpu::TextureViewDescriptor::default());
 
         // Load shader file as a module
         let shaders: wgpu::ShaderModule  = device.create_shader_module(
@@ -276,7 +293,7 @@ impl Renderer
                                     stencil:                wgpu::StencilState::default(),
                                     bias:                   wgpu::DepthBiasState::default(),
                                 }),
-                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},  // MSAA for the LOLs
+                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},
                 fragment:       Some(wgpu::FragmentState {
                                     module:                  &shaders,
                                     entry_point:            Some("fragment_line"),
@@ -320,7 +337,7 @@ impl Renderer
                                     stencil:                wgpu::StencilState::default(),
                                     bias:                   wgpu::DepthBiasState::default(),
                                 }),
-                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},  // MSAA for the LOLs
+                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},
                 fragment:       Some(wgpu::FragmentState {
                                     module:                  &shaders,
                                     entry_point:            Some("fragment_sphere"),
@@ -364,7 +381,7 @@ impl Renderer
                                     stencil:                wgpu::StencilState::default(),
                                     bias:                   wgpu::DepthBiasState::default(),
                                 }),
-                multisample:    wgpu::MultisampleState::default(),
+                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},
                 fragment:       Some(wgpu::FragmentState {
                                     module:                  &shaders,
                                     entry_point:            Some("fragment_box"),
@@ -387,35 +404,54 @@ impl Renderer
             queue:              queue,
             config:             config,
             size:               size,
+
             depth_texture_view: depth_texture_view,
+            msaa_resolver:      msaa_resolve_texture,
 
             line_pipeline:      line_pipeline,
             sphere_pipeline:    sphere_pipeline,
             box_pipeline:       box_pipeline,
         }
     }
+
+    // Render passes
+    fn render(&mut self, state: &AppState, cam: &OrbitCamera, window: &std::sync::Arc<Window>) -> anyhow::Result<()> {
+        // Get and validate current texture
+        let output: wgpu::SurfaceTexture = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(surface_texture)    => surface_texture,
+            wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {self.surface.configure(&self.device, &self.config); surface_texture},
+            wgpu::CurrentSurfaceTexture::Outdated                    => {self.surface.configure(&self.device, &self.config); return Ok(());},
+            wgpu::CurrentSurfaceTexture::Lost                        => { anyhow::bail!("Lost device!") },
+            wgpu::CurrentSurfaceTexture::Timeout                     => { return Ok(());},
+            wgpu::CurrentSurfaceTexture::Occluded                    => { return Ok(());},
+            wgpu::CurrentSurfaceTexture::Validation                  => { return Ok(());},
+        };
+
+        // Create view from surface texture and command encoder
+        let view: wgpu::TextureView = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder: wgpu::CommandEncoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default(),);
+
+        // TODO: Render passes
+
+        Ok(())
+    }
 }
 
 
 fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
-    // Create depth texture
-    let depth_texture = device.create_texture(
+    // Create depth texture view
+    let depth_texture_view: wgpu::TextureView = device.create_texture(
         &wgpu::TextureDescriptor {
             label:              Some("Depth Texture View"),
             size:               wgpu::Extent3d {width: width, height: height, depth_or_array_layers: 1},
             mip_level_count:    1,
-            sample_count:       1,
+            sample_count:       4,
             dimension:          wgpu::TextureDimension::D2,
             format:             wgpu::TextureFormat::Depth32Float,
             usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats:       &[],
         }
-    );
-
-    // Create view of depth texture
-    let depth_texture_view = depth_texture.create_view(
-        &wgpu::TextureViewDescriptor::default() // TODO: Read docs and flesh this out
-    );
+    ).create_view(&wgpu::TextureViewDescriptor::default());
 
     return depth_texture_view;
 }
