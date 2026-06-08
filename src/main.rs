@@ -152,8 +152,8 @@ impl Renderer
                 display:                    None,
             }
         );
-        let surface = instance.create_surface(window.clone()).unwrap();
-        let adapter = instance.request_adapter(
+        let surface: wgpu::Surface = instance.create_surface(window.clone()).unwrap();
+        let adapter: wgpu::Adapter = instance.request_adapter(
             &wgpu::RequestAdapterOptions {
                 power_preference:       wgpu::PowerPreference::HighPerformance,
                 compatible_surface:     Some(&surface),
@@ -162,7 +162,7 @@ impl Renderer
         ).await.unwrap();
 
         // Creating a wgpu logical device and queue
-        let (device, queue) = adapter.request_device(
+        let (device, queue): (wgpu::Device, wgpu::Queue) = adapter.request_device(
             &wgpu::DeviceDescriptor {
                 label:                  None,
                 required_features:      wgpu::Features::default(),
@@ -175,8 +175,8 @@ impl Renderer
 
         // Surface configuration
         let size = window.inner_size();
-        let surface_capabilities = surface.get_capabilities(&adapter);
-        let surface_texture_format = surface_capabilities.formats.iter()
+        let surface_capabilities: wgpu::SurfaceCapabilities = surface.get_capabilities(&adapter);
+        let surface_texture_format: wgpu::TextureFormat = surface_capabilities.formats.iter()
                                         .find(|f| {**f == wgpu::TextureFormat::Rgba16Float}).copied()   // HDR rendering capabilities first
                                         .or_else(|| surface_capabilities.formats.iter()
                                                         .find(|f| {f.is_srgb()}).copied())              // Standard RGB if no HDR
@@ -250,37 +250,48 @@ impl Renderer
         );
 
         // Line pipeline
-        // let line_pipeline: wgpu::RenderPipeline = device.create_render_pipeline(
-        //     &wgpu::RenderPipelineDescriptor {
-        //         label:          wgpu::Label::Some("Line render pipeline"),
-        //         layout:         Some(&pipeline_layout),
-        //         vertex:         wgpu::VertexState {
-        //                             module: &shaders,
-        //                             entry_point: Some("vertex_line"),
-        //                             compilation_options: PipelineCompilationOptions::default(),
-        //                             buffers: &[LineData.desc()]
-        //                         },
-        //         primitive:      wgpu::PrimitiveState {
-        //                             topology: PrimitiveTopology,
-        //                             strip_index_format: Option<IndexFormat>,
-        //                             front_face: FrontFace,
-        //                             cull_mode: Option<Face>,
-        //                             unclipped_depth: bool,
-        //                             polygon_mode: PolygonMode,
-        //                             conservative: bool,
-        //                         },
-        //         depth_stencil: Option<DepthStencilState>,
-        //         multisample:    wgpu::MultisampleState::default(),
-        //         fragment:       Some(wgpu::FragmentState {
-        //                             module:                  &shaders,
-        //                             entry_point:            Some("fragment_line"),
-        //                             compilation_options:    wgpu::PipelineCompilationOptions::default(),
-        //                             targets: &'a [Option<ColorTargetState>],
-        //                         }),
-        //         multiview_mask: None,
-        //         cache:          None,
-        //     }
-        // );
+        let line_pipeline: wgpu::RenderPipeline = device.create_render_pipeline(
+            &wgpu::RenderPipelineDescriptor {
+                label:          wgpu::Label::Some("Line render pipeline"),
+                layout:         Some(&pipeline_layout),
+                vertex:         wgpu::VertexState {
+                                    module: &shaders,
+                                    entry_point: Some("vertex_line"),
+                                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                                    buffers: &[LineData::desc()]
+                                },
+                primitive:      wgpu::PrimitiveState {
+                                    topology:           wgpu::PrimitiveTopology::LineList,
+                                    strip_index_format: Option::<wgpu::IndexFormat>::default(),
+                                    front_face:         wgpu::FrontFace::default(),
+                                    cull_mode:          Option::<wgpu::Face>::default(),
+                                    unclipped_depth:    false,
+                                    polygon_mode:       wgpu::PolygonMode::default(),
+                                    conservative:       false,
+                                },
+                depth_stencil:  Some(wgpu::DepthStencilState {
+                                    format:                 wgpu::TextureFormat::Depth32Float,
+                                    depth_write_enabled:    Some(true),
+                                    depth_compare:          Some(wgpu::CompareFunction::Less),
+                                    stencil:                wgpu::StencilState::default(),
+                                    bias:                   wgpu::DepthBiasState::default(),
+                                }),
+                multisample:    wgpu::MultisampleState::default(),
+                fragment:       Some(wgpu::FragmentState {
+                                    module:                  &shaders,
+                                    entry_point:            Some("fragment_line"),
+                                    compilation_options:    wgpu::PipelineCompilationOptions::default(),
+                                    targets:                &[Some(wgpu::ColorTargetState {
+                                                                    format:     surface_texture_format,
+                                                                    blend:      Some(wgpu::BlendState::ALPHA_BLENDING),
+                                                                    write_mask: wgpu::ColorWrites::ALL,
+                                                                }),
+                                                            ],
+                                }),
+                multiview_mask: None,
+                cache:          None,
+            }
+        );
 
         // Sphere pipeline
 
