@@ -61,7 +61,7 @@ impl AppState
     }
 
     /*
-    pub fn new() -> Self {
+    fn new() -> Self {
 
     }
     */
@@ -131,7 +131,7 @@ struct Renderer
     queue:              wgpu::Queue,
     config:             wgpu::SurfaceConfiguration,
     size:               winit::dpi::PhysicalSize<u32>,
-    depth_view:         wgpu::TextureView,
+    depth_texture_view: wgpu::TextureView,
 
     // Render pipelines
     line_pipeline:      wgpu::RenderPipeline,
@@ -205,7 +205,40 @@ impl Renderer
             }
         );
 
-        // Create bindings for CameraUniform
+        // Create bindings
+        let cam_buf = device.create_buffer(
+            &wgpu::BufferDescriptor {
+                label:              Some("Camera Buffer"),
+                size:               std::mem::size_of::<CameraUniform>() as u64,
+                usage:              wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM ,
+                mapped_at_creation: false,
+            }
+        );
+
+        let cam_bgl = device.create_bind_group_layout(
+            &wgpu::BindGroupLayoutDescriptor {
+                label: Some("Camera Bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding:    0,
+                    visibility: wgpu::ShaderStages::VERTEX |wgpu::ShaderStages::FRAGMENT | 
+                                wgpu::ShaderStages::RAY_GENERATION | wgpu::ShaderStages::COMPUTE, // Futureproofing
+                    ty:         wgpu::BindingType::Buffer {
+                                    ty:                 wgpu::BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
+                                    min_binding_size:   None
+                                },
+                    count:      None,
+                }],
+            }
+        );
+
+        let camera_bind_group = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                label: Some("Camera Bind Group"),
+                layout: &cam_bgl,
+                entries: &[wgpu::BindGroupEntry{binding: 0, resource: cam_buf.as_entire_binding()}]
+            }
+        );
 
         // Layout of the rendering pipelines
 
@@ -213,6 +246,10 @@ impl Renderer
 
 
         todo!("Setup the pipelines and render-related things.");
+
+        // return Self {
+            
+        // }
     }
 }
 
@@ -226,7 +263,7 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
 
     let depth_texture = device.create_texture(
         &wgpu::TextureDescriptor {
-            label:              Some("Depth View texture"),
+            label:              Some("Depth Texture View"),
             size:               size_extent,
             mip_level_count:    1,
             sample_count:       1,
