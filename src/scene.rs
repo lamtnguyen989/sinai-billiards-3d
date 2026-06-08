@@ -71,7 +71,7 @@ impl OrbitCamera
     }
 
     // Convert orbit camera data to uniform data
-    pub fn to_uniform(&mut self, time: f32) -> CameraUniform {
+    pub fn to_uniform(&self, time: f32) -> CameraUniform {
         // Position and perspectives
         let position = self.physical_position();
         let view = Mat4::look_at_rh(position, self.target, Vec3::Y);
@@ -135,6 +135,40 @@ impl SphereData
     }
 }
 
+// Building the sphere (on CPU since the sphere is static)
+pub fn build_sphere(sphere_center: Vec3, radius: f32, stacks: u32, slices: u32) -> (Vec<SphereData>, Vec<u32>) {
+    let mut vertices: Vec<SphereData> = vec![];
+    let mut indices: Vec<u32> = vec![];
+
+    // Finding vertices data for the stacks and slice subdivisions
+    for i in 0..=stacks {
+        let phi = (std::f32::consts::PI * i as f32) / (stacks as f32);  // Polar 
+        for j in 0..=slices {
+            let theta = (std::f32::consts::TAU * j as f32) / (slices as f32);   // Azimuth
+            
+            // The unscaled coordinates (normal vector) for vertex representing this stack and slice
+            let n = Vec3::new(f32::sin(phi)*f32::cos(theta), f32::cos(phi), f32::sin(phi)*f32::sin(theta)); 
+
+            // Store the data of scaled and center offset (translate) to actual position
+            // Note that translation does not affect normal direction, so we can reuse the normal
+            vertices.push(SphereData {position: n.mul_add(Vec3::splat(radius), sphere_center).to_array(), normal: n.to_array()});
+
+            // Computing the index of the vertices
+            if i > 0 && j > 0 {
+                let row_len = slices + 1;
+                let br = i * row_len + j;
+                let bl = br - 1;
+                let tr = br - row_len;
+                let tl = tr - 1;
+
+                indices.extend_from_slice(&[tl, bl, tr, bl, br, tr]);
+            }
+        }
+    }
+
+    return (vertices, indices);
+}
+
 
 // Render data: Box
 #[repr(C)]
@@ -155,4 +189,36 @@ impl BoxData
                             ],
         }
     }
+}
+
+// Build box data on CPU since again this is static
+pub fn build_box(box_size: f32) -> Vec<BoxData> {
+    let mut data: Vec<BoxData> = vec![];
+    let sz = box_size;
+
+    let corners: [[f32; 3]; 8] = 
+    [
+        [0.0,   0.0,    0.0],
+        [sz,    0.0,    0.0],
+        [sz,    sz,     0.0],
+        [0.0,   sz,     0.0],
+        [0.0,   0.0,    sz ],
+        [sz,    0.0,    sz ],
+        [sz,    sz,     sz ],
+        [0.0,   sz,     sz ],
+    ];
+
+    let edges = [
+        (0,1),(1,2),(2,3),(3,0),
+        (4,5),(5,6),(6,7),(7,4),
+        (0,4),(1,5),(2,6),(3,7),
+    ];
+    
+
+    for (a, b) in edges {
+        data.push(BoxData {position: corners[a]});
+        data.push(BoxData {position: corners[b]});
+    }
+    
+    return data;
 }
