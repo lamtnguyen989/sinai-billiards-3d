@@ -146,7 +146,7 @@ impl Renderer
         let instance = wgpu::Instance::new(
             wgpu::InstanceDescriptor {
                 backends:                   wgpu::Backends::PRIMARY,
-                flags:                      wgpu::InstanceFlags::default(), // Apparently, this calls VALIDATION_INDIRECT_CALL flag and not empty()
+                flags:                      wgpu::InstanceFlags::default(),
                 memory_budget_thresholds:   wgpu::MemoryBudgetThresholds::default(),
                 backend_options:            wgpu::BackendOptions::default(),
                 display:                    None,
@@ -308,7 +308,7 @@ impl Renderer
                                     topology:           wgpu::PrimitiveTopology::TriangleList,
                                     strip_index_format: Option::<wgpu::IndexFormat>::default(),
                                     front_face:         wgpu::FrontFace::default(),
-                                    cull_mode:          Some(wgpu::Face::Back), // Leveraging the fact that spheres are symmetric and we only view the front
+                                    cull_mode:          Some(wgpu::Face::Back), // We only view the front
                                     unclipped_depth:    false,
                                     polygon_mode:       wgpu::PolygonMode::default(),
                                     conservative:       false,
@@ -320,7 +320,7 @@ impl Renderer
                                     stencil:                wgpu::StencilState::default(),
                                     bias:                   wgpu::DepthBiasState::default(),
                                 }),
-                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},  // 2x MSAA for the LOLs
+                multisample:    wgpu::MultisampleState {count: 4, mask: !0, alpha_to_coverage_enabled: false,},  // MSAA for the LOLs
                 fragment:       Some(wgpu::FragmentState {
                                     module:                  &shaders,
                                     entry_point:            Some("fragment_sphere"),
