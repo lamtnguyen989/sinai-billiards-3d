@@ -34,7 +34,7 @@ const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering fram
 /***
 *   System state
 ***/
-struct State
+struct AppState
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
@@ -43,7 +43,7 @@ struct State
     paused:         bool
 }
 
-impl State
+impl AppState
 {
     // Constructors
     fn new_random(seed: u64) -> Self {
@@ -61,7 +61,7 @@ impl State
     }
 
     /*
-    pub fn new() -> Self {
+    fn new() -> Self {
 
     }
     */
@@ -125,6 +125,14 @@ fn trajectory_palette() -> Vec<[f32; 4]> {
 ***/
 struct Renderer
 {
+    // GPU context
+    surface:            wgpu::Surface<'static>,
+    device:             wgpu::Device,
+    queue:              wgpu::Queue,
+    config:             wgpu::SurfaceConfiguration,
+    size:               winit::dpi::PhysicalSize<u32>,
+    depth_texture_view: wgpu::TextureView,
+
     // Render pipelines
     line_pipeline:      wgpu::RenderPipeline,
     sphere_pipeline:    wgpu::RenderPipeline,
@@ -134,8 +142,150 @@ struct Renderer
 impl Renderer
 {
     async fn new(window: std::sync::Arc<Window>) -> Self {
+        // Creating wgpu instance 
+        let instance = wgpu::Instance::new(
+            wgpu::InstanceDescriptor {
+                backends:                   wgpu::Backends::PRIMARY,
+                flags:                      wgpu::InstanceFlags::default(), // Apparently, this calls VALIDATION_INDIRECT_CALL flag and not empty()
+                memory_budget_thresholds:   wgpu::MemoryBudgetThresholds::default(),
+                backend_options:            wgpu::BackendOptions::default(),
+                display:                    None,
+            }
+        );
+        let surface = instance.create_surface(window.clone()).unwrap();
+        let adapter = instance.request_adapter(
+            &wgpu::RequestAdapterOptions {
+                power_preference:       wgpu::PowerPreference::HighPerformance,
+                compatible_surface:     Some(&surface),
+                force_fallback_adapter: false
+            }
+        ).await.unwrap();
+
+        // Creating a wgpu logical device and queue
+        let (device, queue) = adapter.request_device(
+            &wgpu::DeviceDescriptor {
+                label:                  None,
+                required_features:      wgpu::Features::default(),
+                required_limits:        wgpu::Limits::default(),
+                experimental_features:  wgpu::ExperimentalFeatures::default(),
+                memory_hints:           wgpu::MemoryHints::Performance,
+                trace:                  wgpu::Trace::Off,
+            }
+        ).await.unwrap();
+
+        // Surface configuration
+        let size = window.inner_size();
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_texture_format = surface_capabilities.formats.iter()
+                                        .find(|f| {**f == wgpu::TextureFormat::Rgba16Float}).copied()   // HDR rendering capabilities first
+                                        .or_else(|| surface_capabilities.formats.iter()
+                                                        .find(|f| {f.is_srgb()}).copied())              // Standard RGB if no HDR
+                                        .unwrap_or(surface_capabilities.formats[0]);                    // Fall back to hardware capabilities
+
+        let config = wgpu::SurfaceConfiguration {
+            usage:                          wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format:                         surface_texture_format,
+            width:                          size.width,
+            height:                         size.height,
+            present_mode:                   wgpu::PresentMode::AutoVsync,
+            desired_maximum_frame_latency:  2,
+            alpha_mode:                     surface_capabilities.alpha_modes[0],
+            view_formats:                   vec![],
+        };
+        surface.configure(&device, &config);
+
+        // Depth texture view
+        let depth_texture_view = make_depth_texture_view(&device, size.width, size.height);
+
+        // Load shader file as a module
+        let shader = device.create_shader_module(
+            wgpu::ShaderModuleDescriptor {
+                label:  Some("WGSL shaders"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shaders.wgsl").into()),
+            }
+        );
+
+        // Create bindings
+        let cam_buf = device.create_buffer(
+            &wgpu::BufferDescriptor {
+                label:              Some("Camera Buffer"),
+                size:               std::mem::size_of::<CameraUniform>() as u64,
+                usage:              wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM ,
+                mapped_at_creation: false,
+            }
+        );
+
+        let cam_bgl = device.create_bind_group_layout(
+            &wgpu::BindGroupLayoutDescriptor {
+                label: Some("Camera Bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding:    0,
+                    visibility: wgpu::ShaderStages::VERTEX |wgpu::ShaderStages::FRAGMENT | 
+                                wgpu::ShaderStages::RAY_GENERATION | wgpu::ShaderStages::COMPUTE, // Futureproofing
+                    ty:         wgpu::BindingType::Buffer {
+                                    ty:                 wgpu::BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
+                                    min_binding_size:   None
+                                },
+                    count:      None,
+                }],
+            }
+        );
+
+        let camera_bind_group = device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                label: Some("Camera Bind Group"),
+                layout: &cam_bgl,
+                entries: &[wgpu::BindGroupEntry{binding: 0, resource: cam_buf.as_entire_binding()}]
+            }
+        );
+
+        // Layout of the rendering pipelines
+        let pipeline_layout = device.create_pipeline_layout(
+            &wgpu::PipelineLayoutDescriptor {
+                label:              Some("Pipeline Layout"),
+                bind_group_layouts: &[Some(&cam_bgl)],
+                immediate_size:     0
+            }
+        );
+
+        // Writing all of the rendering pipelines
+
+
         todo!("Setup the pipelines and render-related things.");
+
+        // return Self {
+            
+        // }
     }
+}
+
+
+fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
+    let size_extent = wgpu::Extent3d {
+        width:                  width,
+        height:                 height,
+        depth_or_array_layers:  1
+    };
+
+    let depth_texture = device.create_texture(
+        &wgpu::TextureDescriptor {
+            label:              Some("Depth Texture View"),
+            size:               size_extent,
+            mip_level_count:    1,
+            sample_count:       1,
+            dimension:          wgpu::TextureDimension::D2,
+            format:             wgpu::TextureFormat::Depth32Float,
+            usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats:       &[],
+        }
+    );
+
+    let depth_texture_view = depth_texture.create_view(
+        &wgpu::TextureViewDescriptor::default() // TODO: Read docs and flesh this out
+    );
+
+    return depth_texture_view;
 }
 
 fn main() {
@@ -143,7 +293,7 @@ fn main() {
     env_logger::init();
 
     // Setup event loop and window
-    let (width, height): (u16, u16) = (1920, 1080);
+    let (width, height): (u32, u32) = (1920, 1080);
     let event_loop = EventLoop::new().unwrap();
     let window = std::sync::Arc::new(
         event_loop.create_window(
@@ -158,7 +308,7 @@ fn main() {
 
     // Setup program states (random)
     let seed: u64 = 69;
-    let mut program_state = State::new_random(seed);
+    let mut program_state = AppState::new_random(seed);
 
     // Event loop
     // event_loop.run();
