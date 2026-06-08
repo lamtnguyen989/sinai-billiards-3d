@@ -190,3 +190,35 @@ impl BoxData
         }
     }
 }
+
+// Build box data on CPU since again this is static
+pub fn build_box(box_size: f32) -> Vec<BoxData> {
+    let mut data: Vec<BoxData> = vec![];
+    let sz = box_size;
+
+    let corners: [[f32; 3]; 8] = 
+    [
+        [0.0,   0.0,    0.0],
+        [sz,    0.0,    0.0],
+        [sz,    sz,     0.0],
+        [0.0,   sz,     0.0],
+        [0.0,   0.0,    sz ],
+        [sz,    0.0,    sz ],
+        [sz,    sz,     sz ],
+        [0.0,   sz,     sz ],
+    ];
+
+    let edges = [
+        (0,1),(1,2),(2,3),(3,0),
+        (4,5),(5,6),(6,7),(7,4),
+        (0,4),(1,5),(2,6),(3,7),
+    ];
+    
+
+    for (a, b) in edges {
+        data.push(BoxData {position: corners[a]});
+        data.push(BoxData {position: corners[b]});
+    }
+    
+    return data;
+}

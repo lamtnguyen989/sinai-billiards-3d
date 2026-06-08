@@ -136,8 +136,8 @@ struct Renderer
     size:               winit::dpi::PhysicalSize<u32>,
 
     // Texture Views (doing MSAA for the LOLs)
-    depth_texture_view: wgpu::TextureView,
-    msaa_resolver:      wgpu::TextureView,
+    depth_texture_view:     wgpu::TextureView,
+    msaa_resolve_texture:   wgpu::TextureView,
 
     // Render pipelines
     line_pipeline:      wgpu::RenderPipeline,
@@ -148,6 +148,7 @@ struct Renderer
     camera_buf:         wgpu::Buffer,
     sphere_verts_buf:   wgpu::Buffer,
     sphere_index_buf:   wgpu::Buffer,
+    box_vertex_buf:     wgpu::Buffer,
 }
 
 impl Renderer
@@ -231,7 +232,7 @@ impl Renderer
         );
 
         // Create bindings
-        let cam_buf: wgpu::Buffer = device.create_buffer(
+        let camera_buf: wgpu::Buffer = device.create_buffer(
             &wgpu::BufferDescriptor {
                 label:              Some("Camera Buffer"),
                 size:               std::mem::size_of::<CameraUniform>() as u64,
@@ -261,7 +262,7 @@ impl Renderer
             &wgpu::BindGroupDescriptor {
                 label: Some("Camera Bind Group"),
                 layout: &cam_bgl,
-                entries: &[wgpu::BindGroupEntry{binding: 0, resource: cam_buf.as_entire_binding()}]
+                entries: &[wgpu::BindGroupEntry{binding: 0, resource: camera_buf.as_entire_binding()}]
             }
         );
 
@@ -407,9 +408,9 @@ impl Renderer
         );
 
         // Build and upload sphere geometry data
-        let (sph_stacks, sph_slices): (u32, u32) = (64, 64);
+        let (sph_stacks, sph_slices) = (64u32, 64u32);
         let (sph_vert, sph_idx): (Vec<SphereData>, Vec<u32>) = build_sphere(SPHERE_CENTER, SPHERE_RADIUS, sph_stacks, sph_slices);
-        let sphere_vertex_buffer: wgpu::Buffer = device.create_buffer_init(
+        let sphere_verts_buf: wgpu::Buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label:      Some("Sphere Vertex Buffer"),
                 contents:   bytemuck::cast_slice(&sph_vert),
@@ -417,7 +418,7 @@ impl Renderer
             }
         );
 
-        let sphere_index_buffer: wgpu::Buffer = device.create_buffer_init(
+        let sphere_index_buf: wgpu::Buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label:      Some("Sphere Index Buffer"),
                 contents:   bytemuck::cast_slice(&sph_idx),
@@ -425,24 +426,21 @@ impl Renderer
             }
         );
 
+        // Build and upload box data
+        let box_verts: Vec<BoxData> = build_box(BOX_SIZE);
+        let box_vertex_buf: wgpu::Buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label:      Some("Box Vertex Buffer"),
+                contents:   bytemuck::cast_slice(&box_verts),
+                usage:      wgpu::BufferUsages::VERTEX,
+            }
+        );
 
         return Self {
-            surface:            surface,
-            device:             device,
-            queue:              queue,
-            config:             config,
-            size:               size,
-
-            depth_texture_view: depth_texture_view,
-            msaa_resolver:      msaa_resolve_texture,
-
-            line_pipeline:      line_pipeline,
-            sphere_pipeline:    sphere_pipeline,
-            box_pipeline:       box_pipeline,
-
-            camera_buf:         cam_buf,
-            sphere_verts_buf:   sphere_vertex_buffer,
-            sphere_index_buf:   sphere_index_buffer,
+            surface, device, queue, config, size,
+            depth_texture_view, msaa_resolve_texture,
+            line_pipeline, sphere_pipeline, box_pipeline,
+            camera_buf, sphere_verts_buf, sphere_index_buf, box_vertex_buf,
         }
     }
 
