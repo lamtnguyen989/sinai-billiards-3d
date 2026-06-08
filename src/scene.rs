@@ -98,7 +98,9 @@ pub struct LineData
 
 impl LineData
 {
-
+    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
+        todo!()
+    }
 }
 
 // Render data: Sphere
@@ -112,8 +114,8 @@ pub struct SphereData
 
 impl SphereData
 {
-    pub fn new() -> Self {
-        todo!();
+    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
+        todo!()
     }
 }
 
@@ -128,7 +130,7 @@ pub struct BoxData
 
 impl BoxData
 {
-    pub fn new() -> Self {
-        todo!();
+    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
+        todo!()
     }
 }

@@ -198,7 +198,7 @@ impl Renderer
         let depth_texture_view = make_depth_texture_view(&device, size.width, size.height);
 
         // Load shader file as a module
-        let shader = device.create_shader_module(
+        let shaders: wgpu::ShaderModule  = device.create_shader_module(
             wgpu::ShaderModuleDescriptor {
                 label:  Some("WGSL shaders"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shaders.wgsl").into()),
@@ -206,7 +206,7 @@ impl Renderer
         );
 
         // Create bindings
-        let cam_buf = device.create_buffer(
+        let cam_buf: wgpu::Buffer = device.create_buffer(
             &wgpu::BufferDescriptor {
                 label:              Some("Camera Buffer"),
                 size:               std::mem::size_of::<CameraUniform>() as u64,
@@ -215,7 +215,7 @@ impl Renderer
             }
         );
 
-        let cam_bgl = device.create_bind_group_layout(
+        let cam_bgl: wgpu::BindGroupLayout = device.create_bind_group_layout(
             &wgpu::BindGroupLayoutDescriptor {
                 label: Some("Camera Bind group layout"),
                 entries: &[wgpu::BindGroupLayoutEntry {
@@ -232,7 +232,7 @@ impl Renderer
             }
         );
 
-        let camera_bind_group = device.create_bind_group(
+        let camera_bind_group: wgpu::BindGroup = device.create_bind_group(
             &wgpu::BindGroupDescriptor {
                 label: Some("Camera Bind Group"),
                 layout: &cam_bgl,
@@ -241,7 +241,7 @@ impl Renderer
         );
 
         // Layout of the rendering pipelines
-        let pipeline_layout = device.create_pipeline_layout(
+        let pipeline_layout: wgpu::PipelineLayout = device.create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor {
                 label:              Some("Pipeline Layout"),
                 bind_group_layouts: &[Some(&cam_bgl)],
@@ -249,29 +249,68 @@ impl Renderer
             }
         );
 
-        // Writing all of the rendering pipelines
+        // Line pipeline
+        // let line_pipeline: wgpu::RenderPipeline = device.create_render_pipeline(
+        //     &wgpu::RenderPipelineDescriptor {
+        //         label:          wgpu::Label::Some("Line render pipeline"),
+        //         layout:         Some(&pipeline_layout),
+        //         vertex:         wgpu::VertexState {
+        //                             module: &shaders,
+        //                             entry_point: Some("vertex_line"),
+        //                             compilation_options: PipelineCompilationOptions::default(),
+        //                             buffers: &[LineData.desc()]
+        //                         },
+        //         primitive:      wgpu::PrimitiveState {
+        //                             topology: PrimitiveTopology,
+        //                             strip_index_format: Option<IndexFormat>,
+        //                             front_face: FrontFace,
+        //                             cull_mode: Option<Face>,
+        //                             unclipped_depth: bool,
+        //                             polygon_mode: PolygonMode,
+        //                             conservative: bool,
+        //                         },
+        //         depth_stencil: Option<DepthStencilState>,
+        //         multisample:    wgpu::MultisampleState::default(),
+        //         fragment:       Some(wgpu::FragmentState {
+        //                             module:                  &shaders,
+        //                             entry_point:            Some("fragment_line"),
+        //                             compilation_options:    wgpu::PipelineCompilationOptions::default(),
+        //                             targets: &'a [Option<ColorTargetState>],
+        //                         }),
+        //         multiview_mask: None,
+        //         cache:          None,
+        //     }
+        // );
+
+        // Sphere pipeline
+
+        // Box pipeline
 
 
         todo!("Setup the pipelines and render-related things.");
 
         // return Self {
-            
+        //     surface:            surface,
+        //     device:             device,
+        //     queue:              queue,
+        //     config:             config,
+        //     size:               size,
+        //     depth_texture_view: depth_texture_view,
+
+        //     line_pipeline:      line_pipeline,
+        //     sphere_pipeline:    wgpu::RenderPipeline,
+        //     box_pipeline:       wgpu::RenderPipeline,
         // }
     }
 }
 
 
 fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
-    let size_extent = wgpu::Extent3d {
-        width:                  width,
-        height:                 height,
-        depth_or_array_layers:  1
-    };
-
+    // Create depth texture
     let depth_texture = device.create_texture(
         &wgpu::TextureDescriptor {
             label:              Some("Depth Texture View"),
-            size:               size_extent,
+            size:               wgpu::Extent3d {width: width, height: height, depth_or_array_layers: 1},
             mip_level_count:    1,
             sample_count:       1,
             dimension:          wgpu::TextureDimension::D2,
@@ -281,6 +320,7 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
         }
     );
 
+    // Create view of depth texture
     let depth_texture_view = depth_texture.create_view(
         &wgpu::TextureViewDescriptor::default() // TODO: Read docs and flesh this out
     );
