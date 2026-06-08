@@ -20,6 +20,7 @@ use rand::{
 };
 
 use glam::{Vec3, DVec3};
+use wgpu::util::DeviceExt;
 
 use tangent::*;
 use physics::*;
@@ -38,6 +39,7 @@ struct AppState
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
+    start_time:     std::time::Instant,
     frame_counter:  u64,
     trail_length:   usize,
     paused:         bool
@@ -54,6 +56,7 @@ impl AppState
         return Self {
             traj:           random_trajectory(&mut rng, color),
             stats:          ErgodicStats::new(&[0.0; NUM_TANGENTS]),
+            start_time:     std::time::Instant::now(),
             frame_counter:  0,
             trail_length:   MAX_HISTORY,
             paused:         true
@@ -140,6 +143,11 @@ struct Renderer
     line_pipeline:      wgpu::RenderPipeline,
     sphere_pipeline:    wgpu::RenderPipeline,
     box_pipeline:       wgpu::RenderPipeline,
+
+    // Buffers
+    camera_buf:         wgpu::Buffer,
+    sphere_verts_buf:   wgpu::Buffer,
+    sphere_index_buf:   wgpu::Buffer,
 }
 
 impl Renderer
@@ -398,6 +406,26 @@ impl Renderer
             }
         );
 
+        // Build and upload sphere geometry data
+        let (sph_stacks, sph_slices): (u32, u32) = (64, 64);
+        let (sph_vert, sph_idx): (Vec<SphereData>, Vec<u32>) = build_sphere(SPHERE_CENTER, SPHERE_RADIUS, sph_stacks, sph_slices);
+        let sphere_vertex_buffer: wgpu::Buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label:      Some("Sphere Vertex Buffer"),
+                contents:   bytemuck::cast_slice(&sph_vert),
+                usage:      wgpu::BufferUsages::VERTEX,
+            }
+        );
+
+        let sphere_index_buffer: wgpu::Buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label:      Some("Sphere Index Buffer"),
+                contents:   bytemuck::cast_slice(&sph_idx),
+                usage:      wgpu::BufferUsages::INDEX,
+            }
+        );
+
+
         return Self {
             surface:            surface,
             device:             device,
@@ -411,6 +439,10 @@ impl Renderer
             line_pipeline:      line_pipeline,
             sphere_pipeline:    sphere_pipeline,
             box_pipeline:       box_pipeline,
+
+            camera_buf:         cam_buf,
+            sphere_verts_buf:   sphere_vertex_buffer,
+            sphere_index_buf:   sphere_index_buffer,
         }
     }
 
@@ -430,6 +462,11 @@ impl Renderer
         // Create view from surface texture and command encoder
         let view: wgpu::TextureView = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
         let mut encoder: wgpu::CommandEncoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default(),);
+
+        // Update (uniform) camera information
+        let elapsed_time: f32 = state.start_time.elapsed().as_secs_f32();
+        let camera_uniform = cam.to_uniform(elapsed_time);
+        self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&camera_uniform));
 
         // TODO: Render passes
 
