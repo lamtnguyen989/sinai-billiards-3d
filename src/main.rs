@@ -149,6 +149,11 @@ struct Renderer
     sphere_verts_buf:   wgpu::Buffer,
     sphere_index_buf:   wgpu::Buffer,
     box_vertex_buf:     wgpu::Buffer,
+
+    // egui
+    egui_ctx:           egui::Context,
+    egui_renderer:      egui_wgpu::Renderer,
+    egui_state:         egui_winit::State,
 }
 
 impl Renderer
@@ -436,11 +441,18 @@ impl Renderer
             }
         );
 
+        // egui
+        let egui_ctx = egui::Context::default();
+        let egui_renderer = egui_wgpu::Renderer::new(&device, surface_texture_format, 
+                                                    egui_wgpu::RendererOptions {msaa_samples: 4, ..Default::default()});
+        let egui_state = egui_winit::State::new(egui_ctx.clone(), egui::ViewportId::ROOT, &*window, None, None, None);
+
         return Self {
             surface, device, queue, config, size,
             depth_texture_view, msaa_resolve_texture,
             line_pipeline, sphere_pipeline, box_pipeline,
             camera_buf, sphere_verts_buf, sphere_index_buf, box_vertex_buf,
+            egui_ctx, egui_renderer, egui_state,
         }
     }
 
