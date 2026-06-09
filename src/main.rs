@@ -33,9 +33,9 @@ const MAX_HISTORY: usize = 5;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
 
 /***
-*   System state
+*   Billiard System state
 ***/
-struct AppState
+struct BilliardsState
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
@@ -45,7 +45,7 @@ struct AppState
     paused:         bool
 }
 
-impl AppState
+impl BilliardsState
 {
     // Constructors
     fn new_random(seed: u64) -> Self {
@@ -413,7 +413,7 @@ impl Renderer
         );
 
         // Build and upload sphere geometry data
-        let (sph_stacks, sph_slices) = (64u32, 64u32);
+        let (sph_stacks, sph_slices) = (64_u32, 64_u32);
         let (sph_vert, sph_idx): (Vec<SphereData>, Vec<u32>) = build_sphere(SPHERE_CENTER, SPHERE_RADIUS, sph_stacks, sph_slices);
         let sphere_verts_buf: wgpu::Buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -456,8 +456,8 @@ impl Renderer
         }
     }
 
-    // Render passes
-    fn render(&mut self, state: &AppState, cam: &OrbitCamera, window: &std::sync::Arc<Window>) -> anyhow::Result<()> {
+    // Render passes (to be called after advacing simulation states)
+    fn render(&mut self, state: &BilliardsState, cam: &OrbitCamera, window: &std::sync::Arc<Window>) -> anyhow::Result<()> {
         // Get and validate current texture
         let output: wgpu::SurfaceTexture = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(surface_texture)    => surface_texture,
@@ -478,6 +478,38 @@ impl Renderer
         let camera_uniform = cam.to_uniform(elapsed_time);
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&camera_uniform));
 
+        // Create trajectory lines vertex data and rendering buffers
+        let traj: &Trajectory = &state.traj;
+        let traj_positions: Vec<glam::Vec3> = traj.get_positions();
+        let n = traj_positions.len();
+
+        let mut traj_line_data: Vec<LineData> = vec![];
+        if n > 1 {
+            for k in 0..n-1 {
+                traj_line_data.push(LineData {
+                    position:   traj_positions[k].to_array(),
+                    color:      traj.color,
+                    age:        (k as f32) / ((n-1) as f32)
+                });
+
+                traj_line_data.push(LineData {
+                    position:   traj_positions[k+1].to_array(),
+                    color:      traj.color,
+                    age:        ((k+1) as f32) / ((n-1) as f32)
+                });
+            }
+        }
+
+        let traj_line_buf: Option<wgpu::Buffer> = match traj_line_data[..] {
+            []  => None,
+            _   => Some(self.device.create_buffer_init(
+                            &wgpu::util::BufferInitDescriptor {
+                                label:      Some("Trajectory lines buffer"),
+                                contents:   bytemuck::cast_slice(&traj_line_data),
+                                usage:      wgpu::BufferUsages:: VERTEX,
+                            })),
+        };
+
         // TODO: Render passes
 
         Ok(())
@@ -486,8 +518,7 @@ impl Renderer
 
 
 fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
-    // Create depth texture view
-    let depth_texture_view: wgpu::TextureView = device.create_texture(
+    return device.create_texture(
         &wgpu::TextureDescriptor {
             label:              Some("Depth Texture View"),
             size:               wgpu::Extent3d {width: width, height: height, depth_or_array_layers: 1},
@@ -499,8 +530,6 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
             view_formats:       &[],
         }
     ).create_view(&wgpu::TextureViewDescriptor::default());
-
-    return depth_texture_view;
 }
 
 fn main() {
@@ -523,7 +552,7 @@ fn main() {
 
     // Setup program states (random)
     let seed: u64 = 69;
-    let mut program_state = AppState::new_random(seed);
+    let mut program_state = BilliardsState::new_random(seed);
 
     // Event loop
     // event_loop.run();

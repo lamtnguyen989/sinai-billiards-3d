@@ -211,6 +211,8 @@ impl Trajectory
     pub fn curr_lya_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra.get_spectrum();}
     pub fn get_collision_count(&self) -> usize {return self.collision_count;}
     pub fn get_mean_free_path(&self) -> f64 {return self.distance_travelled / self.collision_count as f64;}
+    pub fn get_positions(&self) -> Vec<glam::Vec3> {return self.positions.clone();}
+    pub fn get_velocities(&self) -> Vec<glam::Vec3> {return self.velocities.clone();}
 
     // Update trajectory
     pub fn update(&mut self, max_history: usize) -> Result<(), TrajectoryError> {
