@@ -510,7 +510,26 @@ impl Renderer
                             })),
         };
 
-        // TODO: Render passes
+        // Scoped render pass is fine, if in the future I want `RenderPass::forget_lifetime()`, I'll refactor ig
+        // Main render pass
+        // {
+        //     let mut render_pass: wgpu:RenderPass = encoder.begin_render_pass(
+        //         &wgpu::RenderPassDescriptor {
+        //             label: Some("Main render pass"),
+        //             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+        //                     view:           &view,
+        //                     depth_slice:    Option<u32>::default(),
+        //                     resolve_target: Some(self.msaa_resolve_texture),
+        //                     ops: Operations<Color>,
+        //                 })
+        //             ],
+        //             depth_stencil_attachment: Option<RenderPassDepthStencilAttachment<'a>>,
+        //             timestamp_writes:           None,
+        //             occlusion_query_set: Option<&'a QuerySet>,
+        //             multiview_mask:             None,                    
+        //         }
+        //     );
+        // }
 
         Ok(())
     }
