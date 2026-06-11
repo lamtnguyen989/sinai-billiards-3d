@@ -511,25 +511,39 @@ impl Renderer
         };
 
         // Scoped render pass is fine, if in the future I want `RenderPass::forget_lifetime()`, I'll refactor ig
-        // Main render pass
-        // {
-        //     let mut render_pass: wgpu:RenderPass = encoder.begin_render_pass(
-        //         &wgpu::RenderPassDescriptor {
-        //             label: Some("Main render pass"),
-        //             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-        //                     view:           &view,
-        //                     depth_slice:    Option<u32>::default(),
-        //                     resolve_target: Some(self.msaa_resolve_texture),
-        //                     ops: Operations<Color>,
-        //                 })
-        //             ],
-        //             depth_stencil_attachment: Option<RenderPassDepthStencilAttachment<'a>>,
-        //             timestamp_writes:           None,
-        //             occlusion_query_set: Option<&'a QuerySet>,
-        //             multiview_mask:             None,                    
-        //         }
-        //     );
-        // }
+        // Billiards render pass
+        {
+            let mut render_pass: wgpu::RenderPass = encoder.begin_render_pass(
+                &wgpu::RenderPassDescriptor {
+                    label: Some("Billiards render pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view:           &view,
+                            depth_slice:    Option::<u32>::default(),
+                            resolve_target: Some(&self.msaa_resolve_texture),
+                            ops:            wgpu::Operations {
+                                                load:   wgpu::LoadOp::Clear(wgpu::Color{ r: 0.04, g: 0.04, b: 0.07, a: 1.0 }),
+                                                store:  wgpu::StoreOp::Store,
+                                            },
+                        })
+                    ],
+                    depth_stencil_attachment:   Some(wgpu::RenderPassDepthStencilAttachment {
+                                                    view:           &self.depth_texture_view,
+                                                    depth_ops:      Some(wgpu::Operations {
+                                                                            load: wgpu::LoadOp::Clear(1.0),
+                                                                            store:  wgpu::StoreOp::Store,                                                                   }),
+                                                    stencil_ops:    None,
+                                                }),
+                    timestamp_writes:           None,
+                    occlusion_query_set:        Default::default(),
+                    multiview_mask:             None,                    
+                }
+            );
+        }
+
+        // TODO: egui analytics board render pass
+        {
+
+        }
 
         Ok(())
     }
