@@ -541,6 +541,8 @@ impl Renderer
         }
 
         // TODO: egui analytics board render pass
+        let egui_input: egui::RawInput = self.egui_state.take_egui_input(&window);
+        let egui_output: egui::FullOutput = self.egui_ctx.run_ui(egui_input, |ui| {build_egui_ui(ui, state)});
         {
 
         }
@@ -548,6 +550,51 @@ impl Renderer
         Ok(())
     }
 }
+
+fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
+    // Pulling rendering data
+    let erg_data: &ErgodicStats = &state.stats;
+    let time_elapsed = state.start_time.elapsed().as_secs_f32();
+
+    // Create color pallete for the rendering panel
+    let ctx: &egui::Context = ui.ctx();
+    let mut style_ctx: egui::Style = (*ctx.global_style()).clone();
+    style_ctx.visuals.window_fill = egui::Color32::from_rgba_premultiplied(8, 10, 20, 235);
+    style_ctx.visuals.window_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 70, 120));
+    ctx.set_style(style_ctx);
+
+    // Create UI window
+    egui::Window::new("3D Sinai Billiards")
+        .fixed_pos(egui::pos2(10.0, 10.0))
+        .default_width(350.0)
+        .resizable(egui::Vec2b::FALSE)
+        .show(ctx, |ui| {
+            // Metadata display
+
+            // Lyapunov Spectra display
+
+            // Ergodic statistics display
+            ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Ergodic statistics");
+            ui.indent("ergodic_stats", |ui| {
+                stats_display(ui, "KS entropy", format!("{:.4}", erg_data.get_ks_entropy()), egui::Color32::from_rgb(255, 200, 80));
+                stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "Mean-Free path", format!("{:.4}", state.traj.get_mean_free_path()), egui::Color32::from_rgb(180, 120, 255));
+            });
+            ui.separator();
+        });
+}
+
+#[inline] 
+fn stats_display(ui: &mut egui::Ui, stats_type: &str, value: String, color: egui::Color32) {
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new(stats_type).size(11.0).color(egui::Color32::from_rgb(150, 160, 185)));
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.colored_label(color, egui::RichText::new(value).size(12.0));
+        });
+    });
+}
+
+
 
 
 fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
