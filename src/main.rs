@@ -33,9 +33,9 @@ const MAX_HISTORY: usize = 5;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
 
 /***
-*   System state
+*   Billiard System state
 ***/
-struct AppState
+struct BilliardsState
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
@@ -45,7 +45,7 @@ struct AppState
     paused:         bool
 }
 
-impl AppState
+impl BilliardsState
 {
     // Constructors
     fn new_random(seed: u64) -> Self {
@@ -149,6 +149,11 @@ struct Renderer
     sphere_verts_buf:   wgpu::Buffer,
     sphere_index_buf:   wgpu::Buffer,
     box_vertex_buf:     wgpu::Buffer,
+
+    // egui
+    egui_ctx:           egui::Context,
+    egui_renderer:      egui_wgpu::Renderer,
+    egui_state:         egui_winit::State,
 }
 
 impl Renderer
@@ -408,7 +413,7 @@ impl Renderer
         );
 
         // Build and upload sphere geometry data
-        let (sph_stacks, sph_slices) = (64u32, 64u32);
+        let (sph_stacks, sph_slices) = (64_u32, 64_u32);
         let (sph_vert, sph_idx): (Vec<SphereData>, Vec<u32>) = build_sphere(SPHERE_CENTER, SPHERE_RADIUS, sph_stacks, sph_slices);
         let sphere_verts_buf: wgpu::Buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
@@ -436,16 +441,23 @@ impl Renderer
             }
         );
 
+        // egui
+        let egui_ctx = egui::Context::default();
+        let egui_renderer = egui_wgpu::Renderer::new(&device, surface_texture_format, 
+                                                    egui_wgpu::RendererOptions {msaa_samples: 4, ..Default::default()});
+        let egui_state = egui_winit::State::new(egui_ctx.clone(), egui::ViewportId::ROOT, &*window, None, None, None);
+
         return Self {
             surface, device, queue, config, size,
             depth_texture_view, msaa_resolve_texture,
             line_pipeline, sphere_pipeline, box_pipeline,
             camera_buf, sphere_verts_buf, sphere_index_buf, box_vertex_buf,
+            egui_ctx, egui_renderer, egui_state,
         }
     }
 
-    // Render passes
-    fn render(&mut self, state: &AppState, cam: &OrbitCamera, window: &std::sync::Arc<Window>) -> anyhow::Result<()> {
+    // Render passes (to be called after advacing simulation states)
+    fn render(&mut self, state: &BilliardsState, cam: &OrbitCamera, window: &std::sync::Arc<Window>) -> anyhow::Result<()> {
         // Get and validate current texture
         let output: wgpu::SurfaceTexture = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(surface_texture)    => surface_texture,
@@ -466,16 +478,127 @@ impl Renderer
         let camera_uniform = cam.to_uniform(elapsed_time);
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&camera_uniform));
 
-        // TODO: Render passes
+        // Create trajectory lines vertex data and rendering buffers
+        let traj: &Trajectory = &state.traj;
+        let traj_positions: Vec<glam::Vec3> = traj.get_positions();
+        let n = traj_positions.len();
+
+        let mut traj_line_data: Vec<LineData> = vec![];
+        if n > 1 {
+            for k in 0..n-1 {
+                traj_line_data.push(LineData {
+                    position:   traj_positions[k].to_array(),
+                    color:      traj.color,
+                    age:        (k as f32) / ((n-1) as f32)
+                });
+
+                traj_line_data.push(LineData {
+                    position:   traj_positions[k+1].to_array(),
+                    color:      traj.color,
+                    age:        ((k+1) as f32) / ((n-1) as f32)
+                });
+            }
+        }
+
+        let traj_line_buf: Option<wgpu::Buffer> = match traj_line_data[..] {
+            []  => None,
+            _   => Some(self.device.create_buffer_init(
+                            &wgpu::util::BufferInitDescriptor {
+                                label:      Some("Trajectory lines buffer"),
+                                contents:   bytemuck::cast_slice(&traj_line_data),
+                                usage:      wgpu::BufferUsages:: VERTEX,
+                            })),
+        };
+
+        // Scoped render pass is fine, if in the future I want `RenderPass::forget_lifetime()`, I'll refactor ig
+        // Billiards render pass
+        {
+            let mut render_pass: wgpu::RenderPass = encoder.begin_render_pass(
+                &wgpu::RenderPassDescriptor {
+                    label: Some("Billiards render pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view:           &view,
+                            depth_slice:    Option::<u32>::default(),
+                            resolve_target: Some(&self.msaa_resolve_texture),
+                            ops:            wgpu::Operations {
+                                                load:   wgpu::LoadOp::Clear(wgpu::Color{ r: 0.04, g: 0.04, b: 0.07, a: 1.0 }),
+                                                store:  wgpu::StoreOp::Store,
+                                            },
+                        })
+                    ],
+                    depth_stencil_attachment:   Some(wgpu::RenderPassDepthStencilAttachment {
+                                                    view:           &self.depth_texture_view,
+                                                    depth_ops:      Some(wgpu::Operations {
+                                                                            load: wgpu::LoadOp::Clear(1.0),
+                                                                            store:  wgpu::StoreOp::Store,                                                                   }),
+                                                    stencil_ops:    None,
+                                                }),
+                    timestamp_writes:           None,
+                    occlusion_query_set:        Default::default(),
+                    multiview_mask:             None,                    
+                }
+            );
+        }
+
+        // TODO: egui analytics board render pass
+        let egui_input: egui::RawInput = self.egui_state.take_egui_input(&window);
+        let egui_output: egui::FullOutput = self.egui_ctx.run_ui(egui_input, |ui| {build_egui_ui(ui, state)});
+        {
+
+        }
 
         Ok(())
     }
 }
 
+fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
+    // Pulling rendering data
+    let erg_data: &ErgodicStats = &state.stats;
+    let time_elapsed = state.start_time.elapsed().as_secs_f32();
+
+    // Create color pallete for the rendering panel
+    let ctx: &egui::Context = ui.ctx();
+    let mut style_ctx: egui::Style = (*ctx.global_style()).clone();
+    style_ctx.visuals.window_fill = egui::Color32::from_rgba_premultiplied(8, 10, 20, 235);
+    style_ctx.visuals.window_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 70, 120));
+    ctx.set_style(style_ctx);
+
+    // Create UI window
+    egui::Window::new("3D Sinai Billiards")
+        .fixed_pos(egui::pos2(10.0, 10.0))
+        .default_width(350.0)
+        .resizable(egui::Vec2b::FALSE)
+        .show(ctx, |ui| {
+            // Metadata display
+
+            // Lyapunov Spectra display
+
+            // Ergodic statistics display
+            ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Ergodic statistics");
+            ui.indent("ergodic_stats", |ui| {
+                stats_display(ui, "KS entropy", format!("{:.4}", erg_data.get_ks_entropy()), egui::Color32::from_rgb(255, 200, 80));
+                stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "Mean-Free path", format!("{:.4}", state.traj.get_mean_free_path()), egui::Color32::from_rgb(180, 120, 255));
+            });
+            ui.separator();
+        });
+}
+
+#[inline] 
+fn stats_display(ui: &mut egui::Ui, stats_type: &str, value: String, color: egui::Color32) {
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new(stats_type).size(11.0).color(egui::Color32::from_rgb(150, 160, 185)));
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.colored_label(color, egui::RichText::new(value).size(12.0));
+        });
+    });
+}
+
+
+
 
 fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
-    // Create depth texture view
-    let depth_texture_view: wgpu::TextureView = device.create_texture(
+    return device.create_texture(
         &wgpu::TextureDescriptor {
             label:              Some("Depth Texture View"),
             size:               wgpu::Extent3d {width: width, height: height, depth_or_array_layers: 1},
@@ -487,8 +610,6 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
             view_formats:       &[],
         }
     ).create_view(&wgpu::TextureViewDescriptor::default());
-
-    return depth_texture_view;
 }
 
 fn main() {
@@ -511,7 +632,7 @@ fn main() {
 
     // Setup program states (random)
     let seed: u64 = 69;
-    let mut program_state = AppState::new_random(seed);
+    let mut program_state = BilliardsState::new_random(seed);
 
     // Event loop
     // event_loop.run();
