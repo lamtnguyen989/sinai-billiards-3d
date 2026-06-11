@@ -530,7 +530,8 @@ impl Renderer
                                                     view:           &self.depth_texture_view,
                                                     depth_ops:      Some(wgpu::Operations {
                                                                             load: wgpu::LoadOp::Clear(1.0),
-                                                                            store:  wgpu::StoreOp::Store,                                                                   }),
+                                                                            store:  wgpu::StoreOp::Store,
+                                                                        }),
                                                     stencil_ops:    None,
                                                 }),
                     timestamp_writes:           None,
@@ -576,9 +577,12 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
             // Ergodic statistics display
             ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Ergodic statistics");
             ui.indent("ergodic_stats", |ui| {
-                stats_display(ui, "KS entropy", format!("{:.4}", erg_data.get_ks_entropy()), egui::Color32::from_rgb(255, 200, 80));
-                stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), egui::Color32::from_rgb(180, 120, 255));
-                stats_display(ui, "Mean-Free path", format!("{:.4}", state.traj.get_mean_free_path()), egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "KS entropy", format!("{:.4}", erg_data.get_ks_entropy()), 
+                                    egui::Color32::from_rgb(255, 200, 80));
+                stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), 
+                                    egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "Mean-Free path", format!("{:.4}", state.traj.get_mean_free_path()), 
+                                    egui::Color32::from_rgb(180, 120, 255));
             });
             ui.separator();
         });
