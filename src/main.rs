@@ -474,6 +474,8 @@ impl Renderer
 
         // Create view from surface texture and command encoder
         let view: wgpu::TextureView = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        // Command encoder
         let mut encoder: wgpu::CommandEncoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default(),);
 
         // Update (uniform) camera information
@@ -573,19 +575,48 @@ impl Renderer
 
         self.egui_state.handle_platform_output(&window, egui_output.platform_output.clone());
         let egui_primatives: Vec<egui::ClippedPrimitive> = self.egui_ctx.tessellate(egui_output.shapes, egui_output.pixels_per_point);
+        let egui_screen_descriptor = egui_wgpu::ScreenDescriptor {
+                                        size_in_pixels:     [self.size.width, self.size.height], 
+                                        pixels_per_point:   egui_output.pixels_per_point,
+                                    };
+        
         for (texture_id, img_delta) in &egui_output.textures_delta.set {
             self.egui_renderer.update_texture(&self.device, &self.queue, *texture_id, img_delta);
         }
-        self.egui_renderer.update_buffers(&self.device, &self.queue, &mut encoder, &egui_primatives,
-                                            &egui_wgpu::ScreenDescriptor {
-                                                size_in_pixels:     [self.size.width, self.size.height],
-                                                pixels_per_point:   egui_output.pixels_per_point,
-                                            }
-                                        );
+        self.egui_renderer.update_buffers(&self.device, &self.queue, &mut encoder, &egui_primatives, &egui_screen_descriptor);
+
+
         // egui render pass 
         {
+            let mut egui_pass = encoder.begin_render_pass(
+                &wgpu::RenderPassDescriptor {
+                    label: Some("Egui render pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view:           &view,
+                            depth_slice:    Option::<u32>::default(),
+                            resolve_target: Some(&self.msaa_resolve_texture),
+                            ops:            wgpu::Operations {
+                                                load:   wgpu::LoadOp::Load,
+                                                store:  wgpu::StoreOp::Store,
+                                            },
+                        })
+                    ],
+                    depth_stencil_attachment:   None,
+                    timestamp_writes:           None,
+                    occlusion_query_set:        Default::default(),
+                    multiview_mask:             None,                    
+                }
+            ).forget_lifetime();
 
+            self.egui_renderer.render(&mut egui_pass, &egui_primatives, &egui_screen_descriptor);
         }
+
+        // Cleaning up resources 
+        for id in &egui_output.textures_delta.free {self.egui_renderer.free_texture(id);}
+
+        // Submit and present 
+        self.queue.submit([encoder.finish()]);
+        output.present();
 
         Ok(())
     }
