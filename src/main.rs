@@ -585,7 +585,7 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                                 else                    {egui::Color32::from_rgb(180, 180, 100)};  // Zero-threshold: YELLOW
                     
                     let width_scale: f32 = 80.0;
-                    let bar_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
+                    let half_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
                     ui.horizontal(|ui| {
                         let (rect, resp): (egui::Rect, egui::Response) = ui.allocate_exact_size(
                                                                             egui::Vec2{x: width_scale, y: 10.0},
@@ -594,14 +594,14 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                         let bar_mid: f32 = rect.left() + (width_scale / 2.0);
                         if lya_exp > 0.0 {
                             ui.painter().rect_filled(
-                                egui::Rect::from_x_y_ranges(bar_mid..=bar_mid+bar_width, rect.y_range()),
+                                egui::Rect::from_x_y_ranges(bar_mid..=bar_mid+half_width, rect.y_range()),
                                 0.0, 
                                 egui::Color32::from_rgb(60, 200, 80)
                             );
                         }
                         else {
                             ui.painter().rect_filled(
-                                egui::Rect::from_x_y_ranges(bar_mid-bar_width..=bar_mid, rect.y_range()),
+                                egui::Rect::from_x_y_ranges(bar_mid-half_width..=bar_mid, rect.y_range()),
                                 0.0, 
                                 egui::Color32::from_rgb(00, 60, 60)
                             );
