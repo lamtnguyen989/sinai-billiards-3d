@@ -4,29 +4,22 @@ mod ergodic;
 mod lyapunov;
 mod scene;
 
-use std::sync::Arc;
-use winit::{
-    application::ApplicationHandler, 
-    event::*, 
-    event_loop::{ActiveEventLoop, EventLoop}, 
-    keyboard::{KeyCode, PhysicalKey}, 
-    window::{Window}
-};
-use rand::{
-    Rng, 
-    RngExt, 
-    SeedableRng, 
-    rngs::StdRng
-};
-
-use glam::{Vec3, DVec3};
-use wgpu::util::DeviceExt;
-
 use tangent::*;
 use physics::*;
 use ergodic::*;
 use lyapunov::*;
 use scene::*;
+
+use std::sync::Arc;
+use winit::{ 
+    event::*, 
+    event_loop::{ActiveEventLoop, EventLoop}, 
+    keyboard::{KeyCode, PhysicalKey}, 
+    window::{Window, WindowId}
+};
+use rand::{Rng, RngExt,SeedableRng, rngs::StdRng};
+use glam::{Vec3, DVec3};
+use wgpu::util::DeviceExt;
 
 /* Constants */
 const MAX_HISTORY: usize = 5;
@@ -144,11 +137,19 @@ struct Renderer
     sphere_pipeline:    wgpu::RenderPipeline,
     box_pipeline:       wgpu::RenderPipeline,
 
-    // Buffers
+    // Camera
     camera_buf:         wgpu::Buffer,
+    camera_bgl:         wgpu::BindGroupLayout,
+    camera_bind_group:  wgpu::BindGroup,
+
+    // Buffers
     sphere_verts_buf:   wgpu::Buffer,
     sphere_index_buf:   wgpu::Buffer,
     box_vertex_buf:     wgpu::Buffer,
+
+    // Buffer count (size) for draw range
+    sphere_index_count: u32,
+    box_vertex_count:   u32,
 
     // egui
     egui_ctx:           egui::Context,
@@ -246,7 +247,7 @@ impl Renderer
             }
         );
 
-        let cam_bgl: wgpu::BindGroupLayout = device.create_bind_group_layout(
+        let camera_bgl: wgpu::BindGroupLayout = device.create_bind_group_layout(
             &wgpu::BindGroupLayoutDescriptor {
                 label: Some("Camera Bind group layout"),
                 entries: &[wgpu::BindGroupLayoutEntry {
@@ -266,7 +267,7 @@ impl Renderer
         let camera_bind_group: wgpu::BindGroup = device.create_bind_group(
             &wgpu::BindGroupDescriptor {
                 label: Some("Camera Bind Group"),
-                layout: &cam_bgl,
+                layout: &camera_bgl,
                 entries: &[wgpu::BindGroupEntry{binding: 0, resource: camera_buf.as_entire_binding()}]
             }
         );
@@ -275,7 +276,7 @@ impl Renderer
         let pipeline_layout: wgpu::PipelineLayout = device.create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor {
                 label:              Some("Pipeline Layout"),
-                bind_group_layouts: &[Some(&cam_bgl)],
+                bind_group_layouts: &[Some(&camera_bgl)],
                 immediate_size:     0
             }
         );
@@ -451,7 +452,9 @@ impl Renderer
             surface, device, queue, config, size,
             depth_texture_view, msaa_resolve_texture,
             line_pipeline, sphere_pipeline, box_pipeline,
-            camera_buf, sphere_verts_buf, sphere_index_buf, box_vertex_buf,
+            camera_buf, camera_bgl, camera_bind_group,
+            sphere_verts_buf, sphere_index_buf, box_vertex_buf,
+            box_vertex_count: box_verts.len() as u32, sphere_index_count: sph_idx.len() as u32,
             egui_ctx, egui_renderer, egui_state,
         }
     }
@@ -471,6 +474,8 @@ impl Renderer
 
         // Create view from surface texture and command encoder
         let view: wgpu::TextureView = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        // Command encoder
         let mut encoder: wgpu::CommandEncoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default(),);
 
         // Update (uniform) camera information
@@ -513,7 +518,8 @@ impl Renderer
         // Scoped render pass is fine, if in the future I want `RenderPass::forget_lifetime()`, I'll refactor ig
         // Billiards render pass
         {
-            let mut render_pass: wgpu::RenderPass = encoder.begin_render_pass(
+            // Setting up the pass
+            let mut billiards_render_pass: wgpu::RenderPass = encoder.begin_render_pass(
                 &wgpu::RenderPassDescriptor {
                     label: Some("Billiards render pass"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -539,14 +545,78 @@ impl Renderer
                     multiview_mask:             None,                    
                 }
             );
+
+            // Set camera bind group
+            billiards_render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+
+            // Draw box
+            billiards_render_pass.set_pipeline(&self.box_pipeline);
+            billiards_render_pass.set_vertex_buffer(0, self.box_vertex_buf.slice(..));
+            billiards_render_pass.draw(0..self.box_vertex_count, 0..1);
+
+            // Draw sphere
+            billiards_render_pass.set_pipeline(&self.sphere_pipeline);
+            billiards_render_pass.set_vertex_buffer(0, self.sphere_verts_buf.slice(..));
+            billiards_render_pass.set_index_buffer(self.sphere_index_buf.slice(..), wgpu::IndexFormat::Uint32);
+            billiards_render_pass.draw_indexed(0..self.sphere_index_count, 0, 0..1);
+
+            // Draw trajectory lines
+            if traj_line_buf.is_some() {
+                let buf: &wgpu::Buffer = traj_line_buf.as_ref().unwrap();
+                billiards_render_pass.set_pipeline(&self.line_pipeline);
+                billiards_render_pass.set_vertex_buffer(0, buf.slice(..));
+                billiards_render_pass.draw(0..traj_line_data.len() as u32, 0..1);
+            }
         }
 
-        // TODO: egui analytics board render pass
+        // egui analytics board buffer setup
         let egui_input: egui::RawInput = self.egui_state.take_egui_input(&window);
         let egui_output: egui::FullOutput = self.egui_ctx.run_ui(egui_input, |ui| {build_egui_ui(ui, state)});
-        {
 
+        self.egui_state.handle_platform_output(&window, egui_output.platform_output.clone());
+        let egui_primatives: Vec<egui::ClippedPrimitive> = self.egui_ctx.tessellate(egui_output.shapes, egui_output.pixels_per_point);
+        let egui_screen_descriptor = egui_wgpu::ScreenDescriptor {
+                                        size_in_pixels:     [self.size.width, self.size.height], 
+                                        pixels_per_point:   egui_output.pixels_per_point,
+                                    };
+        
+        for (texture_id, img_delta) in &egui_output.textures_delta.set {
+            self.egui_renderer.update_texture(&self.device, &self.queue, *texture_id, img_delta);
         }
+        self.egui_renderer.update_buffers(&self.device, &self.queue, &mut encoder, &egui_primatives, &egui_screen_descriptor);
+
+
+        // egui render pass 
+        {
+            let mut egui_pass = encoder.begin_render_pass(
+                &wgpu::RenderPassDescriptor {
+                    label: Some("Egui render pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view:           &view,
+                            depth_slice:    Option::<u32>::default(),
+                            resolve_target: Some(&self.msaa_resolve_texture),
+                            ops:            wgpu::Operations {
+                                                load:   wgpu::LoadOp::Load,
+                                                store:  wgpu::StoreOp::Store,
+                                            },
+                        })
+                    ],
+                    depth_stencil_attachment:   None,
+                    timestamp_writes:           None,
+                    occlusion_query_set:        Default::default(),
+                    multiview_mask:             None,                    
+                }
+            ).forget_lifetime();
+
+            self.egui_renderer.render(&mut egui_pass, &egui_primatives, &egui_screen_descriptor);
+        }
+
+        // Cleaning up resources 
+        for id in &egui_output.textures_delta.free {self.egui_renderer.free_texture(id);}
+
+        // Submit and present 
+        self.queue.submit([encoder.finish()]);
+        output.present();
 
         Ok(())
     }
@@ -639,9 +709,6 @@ fn stats_display(ui: &mut egui::Ui, stats_type: &str, value: String, color: egui
     });
 }
 
-
-
-
 fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
     return device.create_texture(
         &wgpu::TextureDescriptor {
@@ -660,7 +727,18 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
 // App rendering struct
 struct App
 {
-    
+
+}
+
+impl winit::application::ApplicationHandler for App
+{
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        todo!();
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+        todo!();
+    }
 }
 
 fn main() {
