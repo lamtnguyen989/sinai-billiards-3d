@@ -530,7 +530,8 @@ impl Renderer
                                                     view:           &self.depth_texture_view,
                                                     depth_ops:      Some(wgpu::Operations {
                                                                             load: wgpu::LoadOp::Clear(1.0),
-                                                                            store:  wgpu::StoreOp::Store,                                                                   }),
+                                                                            store:  wgpu::StoreOp::Store,
+                                                                        }),
                                                     stencil_ops:    None,
                                                 }),
                     timestamp_writes:           None,
@@ -570,15 +571,59 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
         .resizable(egui::Vec2b::FALSE)
         .show(ctx, |ui| {
             // Metadata display
+            ui.colored_label(egui::Color32::from_rgb(120, 200, 255), format!("Runtime: {:.1}s", time_elapsed));
+            ui.separator();
 
             // Lyapunov Spectra display
+            ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Lyapunov Spectra");
+            ui.indent("Lya_spectra", |ui| {
+                // Displaying live value and corresponding (relative) horizontal color bar scale for each exponent
+                let eps: f64 = 0.002;
+                for (idx, &lya_exp) in state.stats.get_lyapunov_spectra().iter().enumerate() {
+                    let color = if      lya_exp > eps   {egui::Color32::from_rgb(80, 255, 100)}    // Postive exponent: GREEN
+                                else if lya_exp < -eps  {egui::Color32::from_rgb(255, 80, 80)}     // Negative exponent: RED
+                                else                    {egui::Color32::from_rgb(180, 180, 100)};  // Zero-threshold: YELLOW
+                    
+                    let width_scale: f32 = 80.0;
+                    let half_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
+                    ui.horizontal(|ui| {
+                        let (rect, resp): (egui::Rect, egui::Response) = ui.allocate_exact_size(
+                                                                            egui::Vec2{x: width_scale, y: 10.0},
+                                                                            egui::Sense::HOVER
+                                                                        );
+                        let bar_mid: f32 = rect.left() + (width_scale / 2.0);
+                        if lya_exp > 0.0 {
+                            ui.painter().rect_filled(
+                                egui::Rect::from_x_y_ranges(bar_mid..=bar_mid+half_width, rect.y_range()),
+                                0.0, 
+                                egui::Color32::from_rgb(60, 200, 80)
+                            );
+                        }
+                        else {
+                            ui.painter().rect_filled(
+                                egui::Rect::from_x_y_ranges(bar_mid-half_width..=bar_mid, rect.y_range()),
+                                0.0, 
+                                egui::Color32::from_rgb(00, 60, 60)
+                            );
+                        }
+                    });
+                }
+            });
+            ui.separator();
 
-            // Ergodic statistics display
+            // Statistics display
             ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Ergodic statistics");
             ui.indent("ergodic_stats", |ui| {
-                stats_display(ui, "KS entropy", format!("{:.4}", erg_data.get_ks_entropy()), egui::Color32::from_rgb(255, 200, 80));
-                stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), egui::Color32::from_rgb(180, 120, 255));
-                stats_display(ui, "Mean-Free path", format!("{:.4}", state.traj.get_mean_free_path()), egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "KS entropy", format!("{:.4}", erg_data.get_ks_entropy()), 
+                                    egui::Color32::from_rgb(255, 200, 80));
+                stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), 
+                                    egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "Lyapunov Time", format!("{:.4}", erg_data.get_lyapunov_time()), 
+                                    egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "Collisions count", format!("{}", state.traj.get_collision_count()), 
+                                    egui::Color32::from_rgb(180, 120, 255));
+                stats_display(ui, "Mean-Free path", format!("{:.4}", state.traj.get_mean_free_path()), 
+                                    egui::Color32::from_rgb(180, 120, 255));
             });
             ui.separator();
         });
@@ -610,6 +655,12 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
             view_formats:       &[],
         }
     ).create_view(&wgpu::TextureViewDescriptor::default());
+}
+
+// App rendering struct
+struct App
+{
+    
 }
 
 fn main() {
