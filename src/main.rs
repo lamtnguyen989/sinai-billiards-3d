@@ -523,9 +523,9 @@ impl Renderer
                 &wgpu::RenderPassDescriptor {
                     label: Some("Billiards render pass"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view:           &view,
+                            view:           &self.msaa_resolve_texture,
                             depth_slice:    Option::<u32>::default(),
-                            resolve_target: Some(&self.msaa_resolve_texture),
+                            resolve_target: None,
                             ops:            wgpu::Operations {
                                                 load:   wgpu::LoadOp::Clear(wgpu::Color{ r: 0.04, g: 0.04, b: 0.07, a: 1.0 }),
                                                 store:  wgpu::StoreOp::Store,
@@ -592,9 +592,9 @@ impl Renderer
                 &wgpu::RenderPassDescriptor {
                     label: Some("Egui render pass"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view:           &view,
+                            view:           &self.msaa_resolve_texture,
                             depth_slice:    Option::<u32>::default(),
-                            resolve_target: Some(&self.msaa_resolve_texture),
+                            resolve_target: Some(&view),
                             ops:            wgpu::Operations {
                                                 load:   wgpu::LoadOp::Load,
                                                 store:  wgpu::StoreOp::Store,
@@ -754,7 +754,9 @@ impl winit::application::ApplicationHandler for App
     // Mainly winit 0.30+ convention
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Do nothing if the window is alrerady initialized
-        if (self.window.is_some()) {return;}
+        if (self.window.is_some()) {
+            return;
+        }
 
         // Initalize windows and rendering objects
         let (width, height) = self.resolution;
@@ -770,8 +772,30 @@ impl winit::application::ApplicationHandler for App
         self.camera = Some(OrbitCamera::new(BOX_SIZE, width as f32 / height as f32));
     }
 
+        // About to wait handling
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        
+    }
+
+    // Window event handler
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
-        todo!();
+        let (Some(window), Some(renderer), Some(camera)) = (self.window.as_ref(), self.renderer.as_mut(), self.camera.as_mut())
+                                                            else { return};
+
+        let egui_consumed: bool = renderer.egui_state
+                                        .on_window_event(window.as_ref(), &event)
+                                        .consumed;
+        match event {
+            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::RedrawRequested => {
+                self.state.update();
+                match renderer.render(&self.state, camera, window) {
+                    Ok(_) => {},
+                    Err(e) => eprintln!("{e:?}"),
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -779,25 +803,13 @@ fn main() {
     // Environment logger
     env_logger::init();
 
-    // Setup event loop and window
+    // Setup app
     let (width, height): (u32, u32) = (1920, 1080);
-    let event_loop = EventLoop::new().unwrap();
-    let window = std::sync::Arc::new(
-        event_loop.create_window(
-            Window::default_attributes()
-                .with_title("3D Sinai Billiards Ergodic Dynamics")
-                .with_inner_size(winit::dpi::LogicalSize::new(width, height))
-        ).unwrap()
-    );
-
-    // Setup render pipelines
-    let mut renderer = pollster::block_on(Renderer::new(window.clone()));
-
-    // Setup program states (random)
     let seed: u64 = 69;
-    let mut program_state = BilliardsState::new_random(seed);
+    let mut app = App::new_random(seed, (width, height));
 
     // Event loop
-    // event_loop.run();
+    let event_loop = EventLoop::new().unwrap();
+    event_loop.run_app(&mut app).unwrap();
 }
 

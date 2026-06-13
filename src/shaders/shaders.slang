@@ -13,6 +13,9 @@ struct CameraUniform
     float4x4    proj;
     float4      cam_pos;
     float       time;
+    float       _pad1;
+    float       _pad2;
+    float       _pad3;
 };
 
 ConstantBuffer<CameraUniform> camera;

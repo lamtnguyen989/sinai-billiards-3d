@@ -14,6 +14,7 @@ pub struct CameraUniform
     pub proj:       [[f32; 4]; 4],
     pub camera_pos: [f32; 4],
     pub time:       f32,
+    pub _padding:   [f32; 3],   // Padding due to STD140 layout: Expect 224 bytes total
 }
 
 impl CameraUniform
@@ -82,7 +83,8 @@ impl OrbitCamera
             view:       view.to_cols_array_2d(),
             proj:       proj.to_cols_array_2d(),
             camera_pos: [position.x, position.y, position.z, 1.0],
-            time:       time
+            time:       time,
+            _padding:   Default::default()
         };
     }
 }
