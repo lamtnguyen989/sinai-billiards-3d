@@ -609,6 +609,7 @@ impl Renderer
             ).forget_lifetime();
 
             self.egui_renderer.render(&mut egui_pass, &egui_primatives, &egui_screen_descriptor);
+            drop(egui_pass);
         }
 
         // Cleaning up resources 
@@ -632,7 +633,7 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
     let mut style_ctx: egui::Style = (*ctx.global_style()).clone();
     style_ctx.visuals.window_fill = egui::Color32::from_rgba_premultiplied(8, 10, 20, 235);
     style_ctx.visuals.window_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 70, 120));
-    ctx.set_style(style_ctx);
+    ctx.set_global_style(style_ctx);
 
     // Create UI window
     egui::Window::new("3D Sinai Billiards")
@@ -648,12 +649,12 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
             ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Lyapunov Spectra");
             ui.indent("Lya_spectra", |ui| {
                 // Displaying live value and corresponding (relative) horizontal color bar scale for each exponent
-                let eps: f64 = 0.002;
+                let eps: f64 = 0.005;
                 for &lya_exp in state.stats.get_lyapunov_spectra().iter() {
                     let color = if      lya_exp > eps   {egui::Color32::from_rgb(80, 255, 100)}    // Postive exponent: GREEN
                                 else if lya_exp < -eps  {egui::Color32::from_rgb(255, 80, 80)}     // Negative exponent: RED
                                 else                    {egui::Color32::from_rgb(180, 180, 100)};  // Zero-threshold: YELLOW
-                    
+
                     let width_scale: f32 = 80.0;
                     let half_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
                     ui.horizontal(|ui| {
@@ -673,9 +674,10 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                             ui.painter().rect_filled(
                                 egui::Rect::from_x_y_ranges(bar_mid-half_width..=bar_mid, rect.y_range()),
                                 0.0, 
-                                egui::Color32::from_rgb(00, 60, 60)
+                                egui::Color32::from_rgb(0, 60, 60)
                             );
                         }
+                        ui.colored_label(color, egui::RichText::new(format!("{:+.4}", lya_exp)).size(12.0).monospace());
                     });
                 }
             });
@@ -772,9 +774,11 @@ impl winit::application::ApplicationHandler for App
         self.camera = Some(OrbitCamera::new(BOX_SIZE, width as f32 / height as f32));
     }
 
-        // About to wait handling
+    // About to wait handling
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        
+        if let Some(window) = &self.window {
+            window.request_redraw();
+        }
     }
 
     // Window event handler
@@ -786,7 +790,14 @@ impl winit::application::ApplicationHandler for App
                                         .on_window_event(window.as_ref(), &event)
                                         .consumed;
         match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::CloseRequested => {
+                // Drop resources so no SEG_FAULT like a good citizen
+                self.renderer = None;
+                self.window = None;
+
+                // Exit
+                event_loop.exit()
+            }
             WindowEvent::RedrawRequested => {
                 // Step through the simulation
                 self.state.update();
@@ -795,6 +806,20 @@ impl winit::application::ApplicationHandler for App
                 match renderer.render(&self.state, camera, window) {
                     Ok(_) => {},
                     Err(e) => eprintln!("{e:?}"),
+                }
+            }
+            WindowEvent::KeyboardInput {
+                device_id: _,
+                event: KeyEvent {
+                        physical_key: PhysicalKey::Code(kc),
+                        state: ElementState::Pressed,
+                        ..
+                    },
+                is_synthetic: false,
+            } => { 
+                match kc {
+                    KeyCode::Space  => self.state.paused = !self.state.paused,
+                    _ => {}
                 }
             }
             _ => {}
