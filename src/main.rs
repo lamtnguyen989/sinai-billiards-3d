@@ -378,7 +378,7 @@ impl Renderer
                                     module: &shaders,
                                     entry_point: Some("vertex_box"),
                                     compilation_options: wgpu::PipelineCompilationOptions::default(),
-                                    buffers: &[LineData::to_vertex_buffer_layout()]
+                                    buffers: &[BoxData::to_vertex_buffer_layout()]
                                 },
                 primitive:      wgpu::PrimitiveState {
                                     topology:           wgpu::PrimitiveTopology::LineList,
@@ -788,7 +788,10 @@ impl winit::application::ApplicationHandler for App
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {
+                // Step through the simulation
                 self.state.update();
+
+                // Render the simulation result
                 match renderer.render(&self.state, camera, window) {
                     Ok(_) => {},
                     Err(e) => eprintln!("{e:?}"),
