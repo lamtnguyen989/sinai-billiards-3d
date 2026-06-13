@@ -25,7 +25,7 @@ impl TangentPhaseVector
     // Constructing from array
     pub fn from_array(arr: [f64; NUM_TANGENTS]) -> Self {
         return Self {
-            d_position  : DVec3::new(arr[0], arr[1], arr[2]),
+            d_position : DVec3::new(arr[0], arr[1], arr[2]),
             d_momentum : DVec3::new(arr[3], arr[4], arr[5])
         }
     }

@@ -13,6 +13,9 @@ struct CameraUniform
     float4x4    proj;
     float4      cam_pos;
     float       time;
+    float       _pad1;
+    float       _pad2;
+    float       _pad3;
 };
 
 ConstantBuffer<CameraUniform> camera;
@@ -156,7 +159,7 @@ float4 fragment_sphere(SphereVertex input) {
     float3 rim_light = rim_lighting(n, view_dir, RIM_COLOR, RIM_POWER, RIM_STRENGTH);
     
 
-    // Apply additive lighting for tyhe result
+    // Apply additive lighting for the result
     return float4(SPHERE_RGB + ambient_light + diffuse + rim_light, SPHERE_ALPHA);
 }
 
