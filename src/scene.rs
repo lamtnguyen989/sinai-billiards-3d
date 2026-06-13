@@ -79,7 +79,7 @@ impl OrbitCamera
         let proj = Mat4::perspective_rh(self.fov_y, self.aspect_ratio, 0.01, 100.0);
 
         return CameraUniform {
-            view_proj:  (view * proj).to_cols_array_2d(),
+            view_proj:  (proj * view).to_cols_array_2d(),
             view:       view.to_cols_array_2d(),
             proj:       proj.to_cols_array_2d(),
             camera_pos: [position.x, position.y, position.z, 1.0],
