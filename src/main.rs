@@ -15,7 +15,7 @@ use winit::{
     event::*, 
     event_loop::{ActiveEventLoop, EventLoop}, 
     keyboard::{KeyCode, PhysicalKey}, 
-    window::{Window, WindowId}
+    window::{Window, WindowId, WindowAttributes}
 };
 use rand::{Rng, RngExt,SeedableRng, rngs::StdRng};
 use glam::{Vec3, DVec3};
@@ -649,7 +649,7 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
             ui.indent("Lya_spectra", |ui| {
                 // Displaying live value and corresponding (relative) horizontal color bar scale for each exponent
                 let eps: f64 = 0.002;
-                for (idx, &lya_exp) in state.stats.get_lyapunov_spectra().iter().enumerate() {
+                for &lya_exp in state.stats.get_lyapunov_spectra().iter() {
                     let color = if      lya_exp > eps   {egui::Color32::from_rgb(80, 255, 100)}    // Postive exponent: GREEN
                                 else if lya_exp < -eps  {egui::Color32::from_rgb(255, 80, 80)}     // Negative exponent: RED
                                 else                    {egui::Color32::from_rgb(180, 180, 100)};  // Zero-threshold: YELLOW
@@ -727,13 +727,47 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
 // App rendering struct
 struct App
 {
+    window:     Option<Arc<Window>>,
+    renderer:   Option<Renderer>,
+    camera:     Option<OrbitCamera>,
+    state:      BilliardsState,
+    resolution: (u32, u32),
+}
 
+impl App 
+{
+    // Base Constructors (only actually construct the state)
+    fn new_random(seed: u64, resolution: (u32, u32)) -> Self {
+        return Self {
+            window:     None,
+            renderer:   None,
+            camera:     None,
+            state:      BilliardsState::new_random(seed),
+            resolution: resolution,
+        }
+    }
 }
 
 impl winit::application::ApplicationHandler for App
-{
+{   
+    // Essentially constructor for windows and rendering context
+    // Mainly winit 0.30+ convention
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        todo!();
+        // Do nothing if the window is alrerady initialized
+        if (self.window.is_some()) {return;}
+
+        // Initalize windows and rendering objects
+        let (width, height) = self.resolution;
+        let window_attrs = WindowAttributes::default()
+                                .with_title("3D Sinai Billiards Ergodic Dynamics")
+                                .with_inner_size(winit::dpi::LogicalSize::new(width, height));
+
+        let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
+        let renderer = pollster::block_on(Renderer::new(window.clone()));
+
+        self.window = Some(window);
+        self.renderer = Some(renderer);
+        self.camera = Some(OrbitCamera::new(BOX_SIZE, width as f32 / height as f32));
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
