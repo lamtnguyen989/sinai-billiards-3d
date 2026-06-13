@@ -99,7 +99,7 @@ fn fragment_sphere( _S5 : pixelInput_1, @builtin(position) clip_pos_3 : vec4<f32
 {
     var n_0 : vec3<f32> = normalize(_S5.normal_2);
     const SPHERE_RGB_0 : vec3<f32> = vec3<f32>(0.44999998807907104f, 0.69999998807907104f, 1.0f);
-    var _S6 : pixelOutput_1 = pixelOutput_1( vec4<f32>(SPHERE_RGB_0 + vec3<f32>(0.08500000089406967f) * SPHERE_RGB_0 + vec3<f32>(max(dot(n_0, normalize(vec3<f32>(1.0f, 2.0f, 1.5f))), 0.0f)) * SPHERE_RGB_0 + vec3<f32>((0.40000000596046448f * pow(1.0f - max(dot(n_0, normalize(camera_0.cam_pos_0.xyz - _S5.world_pos_1)), 0.0f), 5.0f))) * vec3<f32>(0.30000001192092896f, 0.5f, 1.0f), 0.5f) );
+    var _S6 : pixelOutput_1 = pixelOutput_1( vec4<f32>(SPHERE_RGB_0 + vec3<f32>(0.08500000089406967f) * SPHERE_RGB_0 + vec3<f32>(max(dot(n_0, normalize(vec3<f32>(1.0f, 2.0f, 1.5f))), 0.0f)) * SPHERE_RGB_0 + vec3<f32>((0.40000000596046448f * pow(1.0f - max(dot(n_0, normalize(camera_0.cam_pos_0.xyz - _S5.world_pos_1)), 0.0f), 5.0f))) * vec3<f32>(0.30000001192092896f, 0.5f, 1.0f), 0.40000000596046448f) );
     return _S6;
 }
 
@@ -136,7 +136,7 @@ struct pixelInput_2
 @fragment
 fn fragment_box( _S8 : pixelInput_2, @builtin(position) clip_pos_5 : vec4<f32>) -> pixelOutput_2
 {
-    var _S9 : pixelOutput_2 = pixelOutput_2( vec4<f32>(0.34999999403953552f, 0.44999998807907104f, 0.55000001192092896f, 0.40000000596046448f) );
+    var _S9 : pixelOutput_2 = pixelOutput_2( vec4<f32>(0.34999999403953552f, 0.44999998807907104f, 0.55000001192092896f, 0.80000001192092896f) );
     return _S9;
 }
 
