@@ -213,7 +213,7 @@ impl Trajectory
     pub fn get_positions(&self) -> Vec<glam::Vec3> {return self.positions.clone();}
     pub fn get_velocities(&self) -> Vec<glam::Vec3> {return self.velocities.clone();}
     pub fn get_mean_free_path(&self) -> f64 {
-        if (self.collision_count == 0) { return 0.0;}
+        if self.collision_count == 0 { return 0.0;}
         return self.distance_travelled / self.collision_count as f64;
     }
 
