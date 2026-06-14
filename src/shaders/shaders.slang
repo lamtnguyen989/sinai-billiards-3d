@@ -9,8 +9,6 @@
 struct CameraUniform
 {
     float4x4    view_proj;
-    float4x4    view;
-    float4x4    proj;
     float4      cam_pos;
     float       time;
     float       _pad1;

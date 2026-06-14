@@ -10,11 +10,9 @@ use glam::{Mat4, Vec3};
 pub struct CameraUniform
 {
     pub view_proj:  [[f32; 4]; 4],
-    pub view:       [[f32; 4]; 4],
-    pub proj:       [[f32; 4]; 4],
     pub camera_pos: [f32; 4],
     pub time:       f32,
-    pub _padding:   [f32; 3],   // Padding due to STD140 layout: Expect 224 bytes total
+    pub _padding:   [f32; 3],   // Padding due to STD140 layout: Expect 96 bytes total
 }
 
 impl CameraUniform
@@ -89,8 +87,6 @@ impl OrbitCamera
 
         return CameraUniform {
             view_proj:  (proj * view).to_cols_array_2d(),
-            view:       view.to_cols_array_2d(),
-            proj:       proj.to_cols_array_2d(),
             camera_pos: [position.x, position.y, position.z, 1.0],
             time:       time,
             _padding:   Default::default()

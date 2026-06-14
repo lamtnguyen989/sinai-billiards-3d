@@ -8,8 +8,6 @@ struct _MatrixStorage_float4x4_ColMajorstd140_0
 struct CameraUniform_std140_0
 {
     @align(16) view_proj_0 : _MatrixStorage_float4x4_ColMajorstd140_0,
-    @align(16) view_0 : _MatrixStorage_float4x4_ColMajorstd140_0,
-    @align(16) proj_0 : _MatrixStorage_float4x4_ColMajorstd140_0,
     @align(16) cam_pos_0 : vec4<f32>,
     @align(16) time_0 : f32,
     @align(4) _pad1_0 : f32,
