@@ -702,6 +702,11 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
 
             // Display viewing controls
             ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "CONTROLS");
+            ui.indent ("Controls", |ui| {
+                controls_display(ui, "Spacebar", "Pause / Resume");
+                controls_display(ui, "Click and Drag", "Orbitting camera");
+                controls_display(ui, "Scroll", "Zoom");
+            });
 
             // Adding PAUSED indicator
             if state.paused {
@@ -720,6 +725,19 @@ fn stats_display(ui: &mut egui::Ui, stats_type: &str, value: String, color: egui
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.colored_label(color, egui::RichText::new(value).size(12.0));
         });
+    });
+}
+
+#[inline]
+fn controls_display(ui: &mut egui::Ui, key: &str, description: &str) {
+    ui.horizontal(|ui| {
+        ui.colored_label(
+            egui::Color32::from_rgb(255, 200, 80),
+            egui::RichText::new(format!("{key:>12}")).size(12.0).monospace(),
+        );
+        ui.label(egui::RichText::new(description)
+            .size(12.0)
+            .color(egui::Color32::from_rgb(150, 160, 180)));
     });
 }
 
@@ -849,14 +867,19 @@ impl winit::application::ApplicationHandler for App
                 if self.mouse_pressed && !egui_consumed {
                     if self.last_mouse_pos.is_some() {
                         let curr_pos = self.last_mouse_pos.unwrap();
-                        camera.orbit((cursor_pos.x - curr_pos.x) as f32, (cursor_pos.y - curr_pos.y) as f32);
+                        let (delta_x, delta_y) = ((cursor_pos.x - curr_pos.x) as f32, (cursor_pos.y - curr_pos.y) as f32);
+                        camera.orbit(delta_x, delta_y);
                     }
                 }
                 // Update mouse last position
                 self.last_mouse_pos = Some(cursor_pos);
             },
-            WindowEvent::MouseWheel {device_id: _, delta: wheel_delta, phase: _} => { /* Scroll for Zoom */
-                // TODO
+            WindowEvent::MouseWheel {device_id: _, delta: wheel_delta, phase: _} if !egui_consumed => { /* Scroll for Zoom */
+                let delta = match wheel_delta { // Only zoom based on vertical data
+                    MouseScrollDelta::LineDelta(_, y) => y,
+                    MouseScrollDelta::PixelDelta(p)   => p.y as f32 * 0.1,
+                }; 
+                camera.zoom(delta);
             }
             _ => {}
         }

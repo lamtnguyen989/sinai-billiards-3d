@@ -71,6 +71,15 @@ impl OrbitCamera
                         .clamp(-radians_range, radians_range);  // Coupled with the sensitivity for no reason, but fix in prod ig
     }
 
+    // Camera zoom mechanism
+    pub fn zoom(&mut self, delta: f32) {
+        let box_size = self.target.x * 2.0; // `self.target` is always the box center
+        
+        // Zooming but modifying the viewing distance
+        // Clamping to make sure nothing weird is happening
+        self.distance = (self.distance - delta * 0.2 * box_size).clamp(box_size * 0.5, box_size * 5.0);
+    }
+
     // Convert orbit camera data to uniform data
     pub fn to_uniform(&self, time: f32) -> CameraUniform {
         // Position and perspectives

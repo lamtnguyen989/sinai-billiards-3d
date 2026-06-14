@@ -136,7 +136,7 @@ struct pixelInput_2
 @fragment
 fn fragment_box( _S8 : pixelInput_2, @builtin(position) clip_pos_5 : vec4<f32>) -> pixelOutput_2
 {
-    var _S9 : pixelOutput_2 = pixelOutput_2( vec4<f32>(0.34999999403953552f, 0.44999998807907104f, 0.55000001192092896f, 0.80000001192092896f) );
+    var _S9 : pixelOutput_2 = pixelOutput_2( vec4<f32>(0.34999999403953552f, 0.44999998807907104f, 0.55000001192092896f, 1.0f) );
     return _S9;
 }
 
