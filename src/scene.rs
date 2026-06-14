@@ -63,11 +63,11 @@ impl OrbitCamera
     // Orbitting mechanism
     pub fn orbit(&mut self, delta_x: f32, delta_y: f32) {
         // Hard-coding numerical practicality factors (for now, dynamic way possible? But do I want to bother?)
-        let SENSITIVITY = 0.005;    
-        let radians_range = std::f32::consts::FRAC_PI_2 - SENSITIVITY;
+        let sensitivity = 0.005;    
+        let radians_range = std::f32::consts::FRAC_PI_2 - sensitivity;
         
-        self.yaw += SENSITIVITY * delta_x;
-        self.pitch = (self.pitch + delta_y*SENSITIVITY)
+        self.yaw += sensitivity * delta_x;
+        self.pitch = (self.pitch + delta_y*sensitivity)
                         .clamp(-radians_range, radians_range);  // Coupled with the sensitivity for no reason, but fix in prod ig
     }
 

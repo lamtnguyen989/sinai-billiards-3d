@@ -15,7 +15,8 @@ use winit::{
     event::*, 
     event_loop::{ActiveEventLoop, EventLoop}, 
     keyboard::{KeyCode, PhysicalKey}, 
-    window::{Window, WindowId, WindowAttributes}
+    window::{Window, WindowId, WindowAttributes},
+    dpi::{PhysicalPosition}
 };
 use rand::{Rng, RngExt,SeedableRng, rngs::StdRng};
 use glam::{Vec3, DVec3};
@@ -699,6 +700,9 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
             });
             ui.separator();
 
+            // Display viewing controls
+            ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "CONTROLS");
+
             // Adding PAUSED indicator
             if state.paused {
                 ui.separator();
@@ -737,11 +741,16 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
 // App rendering struct
 struct App
 {
+    // Rendering context
     window:     Option<Arc<Window>>,
     renderer:   Option<Renderer>,
     camera:     Option<OrbitCamera>,
     state:      BilliardsState,
     resolution: (u32, u32),
+
+    // Behavior helper variables
+    mouse_pressed:  bool,
+    last_mouse_pos: Option<PhysicalPosition<f64>>, 
 }
 
 impl App 
@@ -754,6 +763,9 @@ impl App
             camera:     None,
             state:      BilliardsState::new_random(seed),
             resolution: resolution,
+
+            mouse_pressed:  false,
+            last_mouse_pos: None 
         }
     }
 }
@@ -828,7 +840,20 @@ impl winit::application::ApplicationHandler for App
                 }
             },
             WindowEvent::MouseInput {device_id: _, state: input_state, button: MouseButton::Left,} if !egui_consumed => { /* Left-click */
-                // TODO
+                // Update last mouse location on a new left-click that is not consumed by egui
+                self.mouse_pressed = (input_state == ElementState::Pressed);
+                if self.mouse_pressed {self.last_mouse_pos = None;}
+            },
+            WindowEvent::CursorMoved {device_id: _, position: cursor_pos} => { /* Dragging handled as orbitiing */
+                // Orbitting if mouse is clicked not on the egui panel
+                if self.mouse_pressed && !egui_consumed {
+                    if self.last_mouse_pos.is_some() {
+                        let curr_pos = self.last_mouse_pos.unwrap();
+                        camera.orbit((cursor_pos.x - curr_pos.x) as f32, (cursor_pos.y - curr_pos.y) as f32);
+                    }
+                }
+                // Update mouse last position
+                self.last_mouse_pos = Some(cursor_pos);
             },
             WindowEvent::MouseWheel {device_id: _, delta: wheel_delta, phase: _} => { /* Scroll for Zoom */
                 // TODO
