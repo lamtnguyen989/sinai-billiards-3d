@@ -139,7 +139,6 @@ struct Renderer
 
     // Camera
     camera_buf:         wgpu::Buffer,
-    camera_bgl:         wgpu::BindGroupLayout,
     camera_bind_group:  wgpu::BindGroup,
 
     // Buffers
@@ -452,7 +451,7 @@ impl Renderer
             surface, device, queue, config, size,
             depth_texture_view, msaa_resolve_texture,
             line_pipeline, sphere_pipeline, box_pipeline,
-            camera_buf, camera_bgl, camera_bind_group,
+            camera_buf, camera_bind_group,
             sphere_verts_buf, sphere_index_buf, box_vertex_buf,
             box_vertex_count: box_verts.len() as u32, sphere_index_count: sph_idx.len() as u32,
             egui_ctx, egui_renderer, egui_state,
