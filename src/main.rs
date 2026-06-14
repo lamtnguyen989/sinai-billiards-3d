@@ -23,7 +23,7 @@ use glam::{Vec3, DVec3};
 use wgpu::util::DeviceExt;
 
 /* Constants */
-const MAX_HISTORY: usize = 5;
+const MAX_HISTORY: usize = 10;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
 
 /***
@@ -690,13 +690,13 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                 stats_display(ui, "Metric entropy", format!("{:.4}", erg_data.get_ks_entropy()), 
                                     egui::Color32::from_rgb(255, 200, 80));
                 stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), 
-                                    egui::Color32::from_rgb(180, 120, 255));
+                                    egui::Color32::from_rgb(255, 200, 80));
                 stats_display(ui, "Lyapunov Time", format!("{:.4}", erg_data.get_lyapunov_time()), 
-                                    egui::Color32::from_rgb(180, 120, 255));
+                                    egui::Color32::from_rgb(255, 200, 80));
                 stats_display(ui, "Collisions count", format!("{}", state.traj.get_collision_count()), 
-                                    egui::Color32::from_rgb(180, 120, 255));
+                                    egui::Color32::from_rgb(255, 200, 80));
                 stats_display(ui, "Mean-Free path", format!("{:.4}", state.traj.get_mean_free_path()), 
-                                    egui::Color32::from_rgb(180, 120, 255));
+                                    egui::Color32::from_rgb(255, 200, 80));
             });
             ui.separator();
 
@@ -704,7 +704,8 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
             ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "CONTROLS");
             ui.indent ("Controls", |ui| {
                 controls_display(ui, "Spacebar", "Pause / Resume");
-                controls_display(ui, "Click and Drag", "Orbitting camera");
+                controls_display(ui, "R", "Reset");
+                controls_display(ui, "Drag", "Orbitting camera");
                 controls_display(ui, "Scroll", "Zoom");
             });
 
@@ -767,6 +768,7 @@ struct App
     resolution: (u32, u32),
 
     // Behavior helper variables
+    seed:           Option<u64>,
     mouse_pressed:  bool,
     last_mouse_pos: Option<PhysicalPosition<f64>>, 
 }
@@ -782,6 +784,7 @@ impl App
             state:      BilliardsState::new_random(seed),
             resolution: resolution,
 
+            seed:           Some(seed),
             mouse_pressed:  false,
             last_mouse_pos: None 
         }
@@ -853,7 +856,7 @@ impl winit::application::ApplicationHandler for App
             } => {
                 match kc {
                     KeyCode::Space  => self.state.paused = !self.state.paused,
-                    // KeyCode::KeyR => self.state.reset(),
+                    KeyCode::KeyR => self.state = BilliardsState::new_random(self.seed.unwrap()),
                     _ => {}
                 }
             },

@@ -1,10 +1,11 @@
 # 3D Sinai Billiards Ergodic Dynamics
 
-This is my repository for learning and computing Ergodic Theory concepts and Rust graphics programming through WebGPU. Naturally, as this is mainly a self-explore effort, I plan for this to be a long-term project that I am developing while actively learning [ergodic theory](https://en.wikipedia.org/wiki/Ergodic_theory).
+A live rendering and ergodic statistics computation to a 3D extension of the [Sinai billiards](https://en.wikipedia.org/wiki/Dynamical_billiards#Lorentz_gas,_a.k.a._Sinai_billiard) Dynamical System with Rust and WebGPU.
 
-## Plan
-While this is way down the line, in the end I want this to be a real-time render of the 3D version of the [Sinai billiards](https://en.wikipedia.org/wiki/Dynamical_billiards#Lorentz_gas,_a.k.a._Sinai_billiard) and computations of ergodic quantities such as 
-- [Lyapunov spectra](https://en.wikipedia.org/wiki/Lyapunov_exponent)
-- Entropies (most likely just [KS](https://mathworld.wolfram.com/KolmogorovEntropy.html) but if I find a way to derive the [topological entropy](https://en.wikipedia.org/wiki/Topological_entropy) numerically then it would be great)
+![image info](assets/rendering.png)
 
-_Computations for trajectory physics on CPU should be fine since we are only ever do computations for 1 path. GPU could just be used for rendering._
+## Requirements and Usage
+- Install `rust` via [rustup](https://rust-lang.org/tools/install/).
+- Install a [release](https://github.com/shader-slang/slang/releases/tag/v2026.10.2) of a `slangc` shader compiler for the Slang shading language.
+- (If you made update to the Slang [shader source](src/shaders/shaders.slang)) Compile the shaders to WGSL with the `scripts/compile-shaders.sh`.
+- Build and run with `cargo run --release`.
