@@ -192,5 +192,5 @@ BoxVertex vertex_box(BoxInput input) {
 [shader("fragment")]
 float4 fragment_box(BoxVertex input) {
     // Hard-code Box color
-    return float4(0.35, 0.45, 0.55, 1.0);
+    return float4(1.0, 1.0, 1.0, 0.5);
 }
