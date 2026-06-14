@@ -130,7 +130,7 @@ float4 fragment_sphere(SphereVertex input) {
     float3 n = normalize(input.normal);
     float3 view_dir = normalize(camera.cam_pos.xyz - input.world_pos);
     const float3 SPHERE_RGB = float3(0.45, 0.7, 1.0);
-    const float SPHERE_ALPHA = 0.5;
+    const float SPHERE_ALPHA = 0.4;
 
     // Base lighting (hard-coding for now in development)
     const float3 LIGHT_COLOR = float3(1.0); // White light
@@ -192,5 +192,5 @@ BoxVertex vertex_box(BoxInput input) {
 [shader("fragment")]
 float4 fragment_box(BoxVertex input) {
     // Hard-code Box color
-    return float4(0.35, 0.45, 0.55, 0.4);
+    return float4(0.35, 0.45, 0.55, 1.0);
 }

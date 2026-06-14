@@ -32,7 +32,7 @@ impl<const N: usize> ErgodicStatistics<N>
 
     // Getters
     pub fn get_lyapunov_spectra(&self) -> [f64; N] {return self.lyapunov_spectra;}
-    pub fn get_lyapunov_time(&self) -> f64 {return 1.0/self.lyapunov_spectra[0];}
+    pub fn get_lyapunov_time(&self) -> f64 {if self.lyapunov_spectra[0] == 0.0 {return 0.0;} else {return 1.0/self.lyapunov_spectra[0];}}
     pub fn get_ks_entropy(&self) -> f64 {return self.ks_entropy;}
     pub fn get_ky_dim(&self) -> f64 {return self.kaplan_yorke_dim;}
 }

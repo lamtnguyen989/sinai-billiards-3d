@@ -63,12 +63,21 @@ impl OrbitCamera
     // Orbitting mechanism
     pub fn orbit(&mut self, delta_x: f32, delta_y: f32) {
         // Hard-coding numerical practicality factors (for now, dynamic way possible? But do I want to bother?)
-        let SENSITIVITY = 0.005;    
-        let radians_range = std::f32::consts::FRAC_PI_2 - SENSITIVITY;
+        let sensitivity = 0.005;    
+        let radians_range = std::f32::consts::FRAC_PI_2 - sensitivity;
         
-        self.yaw += SENSITIVITY * delta_x;
-        self.pitch = (self.pitch + delta_y*SENSITIVITY)
+        self.yaw += sensitivity * delta_x;
+        self.pitch = (self.pitch + delta_y*sensitivity)
                         .clamp(-radians_range, radians_range);  // Coupled with the sensitivity for no reason, but fix in prod ig
+    }
+
+    // Camera zoom mechanism
+    pub fn zoom(&mut self, delta: f32) {
+        let box_size = self.target.x * 2.0; // `self.target` is always the box center
+        
+        // Zooming but modifying the viewing distance
+        // Clamping to make sure nothing weird is happening
+        self.distance = (self.distance - delta * 0.2 * box_size).clamp(box_size * 0.5, box_size * 5.0);
     }
 
     // Convert orbit camera data to uniform data

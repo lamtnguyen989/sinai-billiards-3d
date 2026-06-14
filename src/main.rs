@@ -15,7 +15,8 @@ use winit::{
     event::*, 
     event_loop::{ActiveEventLoop, EventLoop}, 
     keyboard::{KeyCode, PhysicalKey}, 
-    window::{Window, WindowId, WindowAttributes}
+    window::{Window, WindowId, WindowAttributes},
+    dpi::{PhysicalPosition}
 };
 use rand::{Rng, RngExt,SeedableRng, rngs::StdRng};
 use glam::{Vec3, DVec3};
@@ -218,7 +219,7 @@ impl Renderer
         // MSAA texture view
         let msaa_resolve_texture: wgpu::TextureView = device.create_texture(
             &wgpu::TextureDescriptor {
-                label:              Some("MSAA intermediate texture"),
+                label:              Some("MSAA resolve texture"),
                 size:               wgpu::Extent3d {width: size.width, height: size.height, depth_or_array_layers: 1},
                 mip_level_count:    1,
                 sample_count:       4,
@@ -527,7 +528,7 @@ impl Renderer
                             depth_slice:    Option::<u32>::default(),
                             resolve_target: None,
                             ops:            wgpu::Operations {
-                                                load:   wgpu::LoadOp::Clear(wgpu::Color{ r: 0.04, g: 0.04, b: 0.07, a: 1.0 }),
+                                                load:   wgpu::LoadOp::Clear(wgpu::Color{ r: 0.04, g: 0.04, b: 0.07, a: 0.75 }),
                                                 store:  wgpu::StoreOp::Store,
                                             },
                         })
@@ -642,8 +643,8 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
         .resizable(egui::Vec2b::FALSE)
         .show(ctx, |ui| {
             // Metadata display
-            ui.colored_label(egui::Color32::from_rgb(120, 200, 255), format!("Runtime: {:.1}s", time_elapsed));
-            ui.separator();
+            // ui.colored_label(egui::Color32::from_rgb(120, 200, 255), format!("Runtime: {:.1}s", time_elapsed));
+            // ui.separator();
 
             // Lyapunov Spectra display
             ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Lyapunov Spectra");
@@ -659,7 +660,7 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                     let half_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
                     ui.horizontal(|ui| {
                         let (rect, resp): (egui::Rect, egui::Response) = ui.allocate_exact_size(
-                                                                            egui::Vec2{x: width_scale, y: 10.0},
+                                                                            egui::Vec2{x: width_scale, y: 12.0},
                                                                             egui::Sense::HOVER
                                                                         );
                         let bar_mid: f32 = rect.left() + (width_scale / 2.0);
@@ -674,7 +675,7 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                             ui.painter().rect_filled(
                                 egui::Rect::from_x_y_ranges(bar_mid-half_width..=bar_mid, rect.y_range()),
                                 0.0, 
-                                egui::Color32::from_rgb(0, 60, 60)
+                                egui::Color32::from_rgb(200, 60, 60)
                             );
                         }
                         ui.colored_label(color, egui::RichText::new(format!("{:+.4}", lya_exp)).size(12.0).monospace());
@@ -686,7 +687,7 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
             // Statistics display
             ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "Ergodic statistics");
             ui.indent("ergodic_stats", |ui| {
-                stats_display(ui, "KS entropy", format!("{:.4}", erg_data.get_ks_entropy()), 
+                stats_display(ui, "Metric entropy", format!("{:.4}", erg_data.get_ks_entropy()), 
                                     egui::Color32::from_rgb(255, 200, 80));
                 stats_display(ui, "Kaplan-Yorke dimension", format!("{:.4}", erg_data.get_ky_dim()), 
                                     egui::Color32::from_rgb(180, 120, 255));
@@ -698,16 +699,45 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                                     egui::Color32::from_rgb(180, 120, 255));
             });
             ui.separator();
+
+            // Display viewing controls
+            ui.colored_label(egui::Color32::from_rgb(200, 230, 255), "CONTROLS");
+            ui.indent ("Controls", |ui| {
+                controls_display(ui, "Spacebar", "Pause / Resume");
+                controls_display(ui, "Click and Drag", "Orbitting camera");
+                controls_display(ui, "Scroll", "Zoom");
+            });
+
+            // Adding PAUSED indicator
+            if state.paused {
+                ui.separator();
+                ui.centered_and_justified(|ui| {
+                    ui.colored_label(egui::Color32::from_rgb(255, 180, 50), "⏸  PAUSED");
+                });
+            }
         });
 }
 
 #[inline] 
 fn stats_display(ui: &mut egui::Ui, stats_type: &str, value: String, color: egui::Color32) {
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(stats_type).size(11.0).color(egui::Color32::from_rgb(150, 160, 185)));
+        ui.label(egui::RichText::new(stats_type).size(12.0).color(egui::Color32::from_rgb(150, 160, 185)));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.colored_label(color, egui::RichText::new(value).size(12.0));
         });
+    });
+}
+
+#[inline]
+fn controls_display(ui: &mut egui::Ui, key: &str, description: &str) {
+    ui.horizontal(|ui| {
+        ui.colored_label(
+            egui::Color32::from_rgb(255, 200, 80),
+            egui::RichText::new(format!("{key:>12}")).size(12.0).monospace(),
+        );
+        ui.label(egui::RichText::new(description)
+            .size(12.0)
+            .color(egui::Color32::from_rgb(150, 160, 180)));
     });
 }
 
@@ -729,11 +759,16 @@ fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wg
 // App rendering struct
 struct App
 {
+    // Rendering context
     window:     Option<Arc<Window>>,
     renderer:   Option<Renderer>,
     camera:     Option<OrbitCamera>,
     state:      BilliardsState,
     resolution: (u32, u32),
+
+    // Behavior helper variables
+    mouse_pressed:  bool,
+    last_mouse_pos: Option<PhysicalPosition<f64>>, 
 }
 
 impl App 
@@ -746,6 +781,9 @@ impl App
             camera:     None,
             state:      BilliardsState::new_random(seed),
             resolution: resolution,
+
+            mouse_pressed:  false,
+            last_mouse_pos: None 
         }
     }
 }
@@ -790,7 +828,7 @@ impl winit::application::ApplicationHandler for App
                                         .on_window_event(window.as_ref(), &event)
                                         .consumed;
         match event {
-            WindowEvent::CloseRequested => {
+            WindowEvent::CloseRequested => { /* Exit event */
                 // Drop resources so no SEG_FAULT like a good citizen
                 self.renderer = None;
                 self.window = None;
@@ -798,7 +836,7 @@ impl winit::application::ApplicationHandler for App
                 // Exit
                 event_loop.exit()
             }
-            WindowEvent::RedrawRequested => {
+            WindowEvent::RedrawRequested => { /* Advancing simulation */
                 // Step through the simulation
                 self.state.update();
 
@@ -808,19 +846,40 @@ impl winit::application::ApplicationHandler for App
                     Err(e) => eprintln!("{e:?}"),
                 }
             }
-            WindowEvent::KeyboardInput {
-                device_id: _,
-                event: KeyEvent {
-                        physical_key: PhysicalKey::Code(kc),
-                        state: ElementState::Pressed,
-                        ..
-                    },
-                is_synthetic: false,
-            } => { 
+            WindowEvent::KeyboardInput {/* Keyboard input handling */
+                device_id:      _,
+                event:          KeyEvent {physical_key: PhysicalKey::Code(kc), state: ElementState::Pressed, ..},
+                is_synthetic:   false,
+            } => {
                 match kc {
                     KeyCode::Space  => self.state.paused = !self.state.paused,
+                    // KeyCode::KeyR => self.state.reset(),
                     _ => {}
                 }
+            },
+            WindowEvent::MouseInput {device_id: _, state: input_state, button: MouseButton::Left,} if !egui_consumed => { /* Left-click */
+                // Update last mouse location on a new left-click that is not consumed by egui
+                self.mouse_pressed = (input_state == ElementState::Pressed);
+                if self.mouse_pressed {self.last_mouse_pos = None;}
+            },
+            WindowEvent::CursorMoved {device_id: _, position: cursor_pos} => { /* Dragging handled as orbitiing */
+                // Orbitting if mouse is clicked not on the egui panel
+                if self.mouse_pressed && !egui_consumed {
+                    if self.last_mouse_pos.is_some() {
+                        let curr_pos = self.last_mouse_pos.unwrap();
+                        let (delta_x, delta_y) = ((cursor_pos.x - curr_pos.x) as f32, (cursor_pos.y - curr_pos.y) as f32);
+                        camera.orbit(delta_x, delta_y);
+                    }
+                }
+                // Update mouse last position
+                self.last_mouse_pos = Some(cursor_pos);
+            },
+            WindowEvent::MouseWheel {device_id: _, delta: wheel_delta, phase: _} if !egui_consumed => { /* Scroll for Zoom */
+                let delta = match wheel_delta { // Only zoom based on vertical data
+                    MouseScrollDelta::LineDelta(_, y) => y,
+                    MouseScrollDelta::PixelDelta(p)   => p.y as f32 * 0.1,
+                }; 
+                camera.zoom(delta);
             }
             _ => {}
         }
@@ -832,7 +891,7 @@ fn main() {
     env_logger::init();
 
     // Setup app
-    let (width, height): (u32, u32) = (1920, 1080);
+    let (width, height): (u32, u32) = (1280, 800);
     let seed: u64 = 69;
     let mut app = App::new_random(seed, (width, height));
 
