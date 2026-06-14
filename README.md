@@ -1,13 +1,13 @@
 # 3D Sinai Billiards Ergodic Dynamics
 
-A simple live rendering and ergodic statistics computation to a 3D extension of the [Sinai billiards](https://en.wikipedia.org/wiki/Dynamical_billiards#Lorentz_gas,_a.k.a._Sinai_billiard) Dynamical System with Rust and WebGPU.
+A live rendering and ergodic statistics computation to a 3D extension of the [Sinai billiards](https://en.wikipedia.org/wiki/Dynamical_billiards#Lorentz_gas,_a.k.a._Sinai_billiard) Dynamical System with Rust and WebGPU framework.
 
 ![image info](assets/rendering.png)
 
 ## Chaotic System setup and computation
-The dynamical system model is a unit speed (actually unit momenta) ray reflecting with elastic collision within a 3D box $[0, L]^3$ that encloses a spherical scatterer. With this, we can approximate in real-time a few notable ergodic quantities and more statistics such as 
-- ___The spectrum of [Lyapunov exponents](https://en.wikipedia.org/wiki/Lyapunov_exponent)___: via estimating the singular values of the system's coordinate frame evolution in the phase space (cotangent space).
-- ___Kolmogorov-Sinai entropy (or equivalently, the metric entropy)___: with applying the [Pesin's Entropy Formula](http://www.scholarpedia.org/article/Pesin_entropy_formula) on the full Lyapunov spectra.
+This 3D Sinai Billiards dynamical system model is a unit speed, unit momenta particle ray reflecting with elastic collision within a 3D box $[0, L]^3$ that encloses a spherical scatterer. With this, we can approximate in real-time a few notable ergodic quantities and statistics such as, but not limited to:
+- ___The spectrum of [Lyapunov exponents](https://en.wikipedia.org/wiki/Lyapunov_exponent)___: via estimating the singular values of the system's coordinate frame evolution in the phase space (cotangent bundle).
+- ___Kolmogorov-Sinai entropy (metric entropy)___: with applying (an extension of) the [Pesin's Entropy Formula](http://www.scholarpedia.org/article/Pesin_entropy_formula) on the full Lyapunov spectra.
 - ___[Mean-free path](https://en.wikipedia.org/wiki/Mean_free_path)___ of the trajectory in the box.
 
 ## Requirements and Usage

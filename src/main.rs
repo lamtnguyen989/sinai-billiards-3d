@@ -7,7 +7,6 @@ mod scene;
 use tangent::*;
 use physics::*;
 use ergodic::*;
-use lyapunov::*;
 use scene::*;
 
 use std::sync::Arc;
@@ -18,8 +17,8 @@ use winit::{
     window::{Window, WindowId, WindowAttributes},
     dpi::{PhysicalPosition}
 };
-use rand::{Rng, RngExt,SeedableRng, rngs::StdRng};
-use glam::{Vec3, DVec3};
+use rand::{SeedableRng, rngs::StdRng};
+use glam::Vec3;
 use wgpu::util::DeviceExt;
 
 /* Constants */
@@ -69,7 +68,7 @@ impl BilliardsState
         if self.paused {return;}
 
         // Compute results between rendering frame
-        for k in 0..STEPS_PER_FRAME {
+        for _k in 0..STEPS_PER_FRAME {
             match self.traj.update(self.trail_length) {
                 Ok(_)   => {},
                 Err(e)  => eprintln!("Trajectory update failed. Error: {:?}", e),
@@ -140,7 +139,6 @@ struct Renderer
 
     // Camera
     camera_buf:         wgpu::Buffer,
-    camera_bgl:         wgpu::BindGroupLayout,
     camera_bind_group:  wgpu::BindGroup,
 
     // Buffers
@@ -453,7 +451,7 @@ impl Renderer
             surface, device, queue, config, size,
             depth_texture_view, msaa_resolve_texture,
             line_pipeline, sphere_pipeline, box_pipeline,
-            camera_buf, camera_bgl, camera_bind_group,
+            camera_buf, camera_bind_group,
             sphere_verts_buf, sphere_index_buf, box_vertex_buf,
             box_vertex_count: box_verts.len() as u32, sphere_index_count: sph_idx.len() as u32,
             egui_ctx, egui_renderer, egui_state,
@@ -627,7 +625,7 @@ impl Renderer
 fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
     // Pulling rendering data
     let erg_data: &ErgodicStats = &state.stats;
-    let time_elapsed = state.start_time.elapsed().as_secs_f32();
+    let _time_elapsed = state.start_time.elapsed().as_secs_f32();
 
     // Create color pallete for the rendering panel
     let ctx: &egui::Context = ui.ctx();
@@ -659,7 +657,7 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                     let width_scale: f32 = 80.0;
                     let half_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
                     ui.horizontal(|ui| {
-                        let (rect, resp): (egui::Rect, egui::Response) = ui.allocate_exact_size(
+                        let (rect, _resp): (egui::Rect, egui::Response) = ui.allocate_exact_size(
                                                                             egui::Vec2{x: width_scale, y: 12.0},
                                                                             egui::Sense::HOVER
                                                                         );
@@ -797,7 +795,7 @@ impl winit::application::ApplicationHandler for App
     // Mainly winit 0.30+ convention
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Do nothing if the window is alrerady initialized
-        if (self.window.is_some()) {
+        if self.window.is_some()  {
             return;
         }
 
@@ -816,14 +814,14 @@ impl winit::application::ApplicationHandler for App
     }
 
     // About to wait handling
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         if let Some(window) = &self.window {
             window.request_redraw();
         }
     }
 
     // Window event handler
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
         let (Some(window), Some(renderer), Some(camera)) = (self.window.as_ref(), self.renderer.as_mut(), self.camera.as_mut())
                                                             else { return};
 
@@ -862,7 +860,7 @@ impl winit::application::ApplicationHandler for App
             },
             WindowEvent::MouseInput {device_id: _, state: input_state, button: MouseButton::Left,} if !egui_consumed => { /* Left-click */
                 // Update last mouse location on a new left-click that is not consumed by egui
-                self.mouse_pressed = (input_state == ElementState::Pressed);
+                self.mouse_pressed = input_state == ElementState::Pressed ;
                 if self.mouse_pressed {self.last_mouse_pos = None;}
             },
             WindowEvent::CursorMoved {device_id: _, position: cursor_pos} => { /* Dragging handled as orbitiing */

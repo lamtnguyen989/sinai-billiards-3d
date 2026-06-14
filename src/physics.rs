@@ -3,7 +3,7 @@ use glam::{Vec3, DVec3};
 use nalgebra::{Matrix6};
 
 use crate::tangent::{NUM_TANGENTS, TangentPhaseVector};
-use crate::lyapunov::{LyapunovSpectra, FrameLayout};
+use crate::lyapunov::LyapunovSpectra;
 
 /// Note the model assume unit mass so velocities and momenta are interchangable
 
