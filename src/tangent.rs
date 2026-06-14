@@ -1,4 +1,4 @@
-use glam::{Vec3, DVec3};
+use glam::DVec3;
 
 pub const NUM_TANGENTS: usize = 6;
 
