@@ -11,8 +11,6 @@ pub struct CameraUniform
 {
     pub view_proj:  [[f32; 4]; 4],
     pub camera_pos: [f32; 4],
-    pub time:       f32,
-    pub _padding:   [f32; 3],   // Padding due to STD140 layout: Expect 96 bytes total
 }
 
 impl CameraUniform
@@ -79,7 +77,7 @@ impl OrbitCamera
     }
 
     // Convert orbit camera data to uniform data
-    pub fn to_uniform(&self, time: f32) -> CameraUniform {
+    pub fn to_uniform(&self) -> CameraUniform {
         // Position and perspectives
         let position = self.physical_position();
         let view = Mat4::look_at_rh(position, self.target, Vec3::Y);
@@ -88,8 +86,6 @@ impl OrbitCamera
         return CameraUniform {
             view_proj:  (proj * view).to_cols_array_2d(),
             camera_pos: [position.x, position.y, position.z, 1.0],
-            time:       time,
-            _padding:   Default::default()
         };
     }
 }

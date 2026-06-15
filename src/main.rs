@@ -477,9 +477,8 @@ impl Renderer
         // Command encoder
         let mut encoder: wgpu::CommandEncoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default(),);
 
-        // Update (uniform) camera information
-        let elapsed_time: f32 = state.start_time.elapsed().as_secs_f32();
-        let camera_uniform = cam.to_uniform(elapsed_time);
+        // Update uniform camera information
+        let camera_uniform = cam.to_uniform();
         self.queue.write_buffer(&self.camera_buf, 0, bytemuck::bytes_of(&camera_uniform));
 
         // Create trajectory lines vertex data and rendering buffers
