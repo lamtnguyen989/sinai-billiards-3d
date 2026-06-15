@@ -1,7 +1,7 @@
 use nalgebra::{
-    SMatrix, Const, DimMin,
+    SMatrix, Const, DimMin, DimDiff, DimSub,
     DefaultAllocator, allocator::Allocator,
-    ArrayStorage,
+    ArrayStorage, U1
 };
 
 /***
@@ -24,8 +24,14 @@ pub struct LyapunovSpectra<const N: usize>
 
 impl<const N: usize> LyapunovSpectra<N> 
 where 
-    Const<N>: DimMin<Const<N>, Output = Const<N>>,
-    DefaultAllocator: Allocator<Const<N>, Const<N>, Buffer<f64> = ArrayStorage<f64, N, N>> + Allocator<Const<N>>,
+    Const<N>: DimMin<Const<N>, Output = Const<N>>
+            + DimSub<U1>,
+    DimDiff<Const<N>, U1>: nalgebra::DimMin<Const<N>>,
+    DefaultAllocator: Allocator<Const<N>, Const<N>, Buffer<f64> = ArrayStorage<f64, N, N>> + Allocator<Const<N>>
+                    + Allocator<Const<N>>
+                    + Allocator<DimDiff<Const<N>, U1>>
+                    + Allocator<Const<N>, DimDiff<Const<N>, U1>>
+                    + Allocator<DimDiff<Const<N>, U1>, Const<N>>, 
 {
     // Constructor
     pub fn new() -> Self {
@@ -48,14 +54,14 @@ where
         }
     }
     
+    // Reorthorgonalize frame for improving stability and correctness of the solution spectra (QR-decomposition default)
     #[inline]
     pub fn reorthorgonalize_frame(&mut self) {
-        // For improving stability and correctness of the solution spectra
         let frame_qr_decomp = self.frame.clone().qr();
         self.frame.copy_from(&frame_qr_decomp.q());
     }
 
-    // Compute the QR-decomposition of internal frame to get the Lyapunov spectra
+    // Compute the Lyapunov spectra using QR-decomposition of internal frame (QR-decomposition default)
     #[inline]
     pub fn compute_from_frame(&mut self, t: f64, total_time: f64) -> () {
         // Take QR-decomposition of the frame
@@ -70,6 +76,15 @@ where
 
         // Update the spectra and phase frame based on computed increments
         for k in 0..N {self.spectrum[k] += (increments[k] - self.spectrum[k]*t) / total_time;}
+    }
+
+    // Compute the Lyapunov spectra using SVD-decomposition of internal frame (SVD version)
+    #[inline]
+    pub fn compute_from_frame_svd(&mut self, t: f64, total_time: f64)  -> () {
+        // SVD decomposition of the frame 
+        let frame_svd = self.frame.clone().svd(true, true);
+
+        todo!("Apply Greene & Kim methods");
     }
 
     // Getters
