@@ -9,10 +9,6 @@ struct CameraUniform_std140_0
 {
     @align(16) view_proj_0 : _MatrixStorage_float4x4_ColMajorstd140_0,
     @align(16) cam_pos_0 : vec4<f32>,
-    @align(16) time_0 : f32,
-    @align(4) _pad1_0 : f32,
-    @align(8) _pad2_0 : f32,
-    @align(4) _pad3_0 : f32,
 };
 
 @binding(0) @group(0) var<uniform> camera_0 : CameraUniform_std140_0;
