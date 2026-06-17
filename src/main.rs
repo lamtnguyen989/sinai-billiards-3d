@@ -212,9 +212,20 @@ impl Renderer
         surface.configure(&device, &config);
 
         // Depth texture view
-        let depth_texture_view: wgpu::TextureView = make_depth_texture_view(&device, size.width, size.height);
+        let depth_texture_view: wgpu::TextureView = device.create_texture(
+            &wgpu::TextureDescriptor {
+                label:              Some("Depth Texture View"),
+                size:               wgpu::Extent3d {width: size.width, height: size.height, depth_or_array_layers: 1},
+                mip_level_count:    1,
+                sample_count:       4,
+                dimension:          wgpu::TextureDimension::D2,
+                format:             wgpu::TextureFormat::Depth32Float,
+                usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats:       &[],
+            }
+        ).create_view(&wgpu::TextureViewDescriptor::default());
 
-        // MSAA texture view
+        // MSAA intermediate texture view
         let msaa_resolve_texture: wgpu::TextureView = device.create_texture(
             &wgpu::TextureDescriptor {
                 label:              Some("MSAA resolve texture"),
@@ -510,7 +521,8 @@ impl Renderer
                                 label:      Some("Trajectory lines buffer"),
                                 contents:   bytemuck::cast_slice(&traj_line_data),
                                 usage:      wgpu::BufferUsages:: VERTEX,
-                            })),
+                            }
+                        )),
         };
 
         // Scoped render pass is fine, if in the future I want `RenderPass::forget_lifetime()`, I'll refactor ig
@@ -739,20 +751,6 @@ fn controls_display(ui: &mut egui::Ui, key: &str, description: &str) {
     });
 }
 
-fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
-    return device.create_texture(
-        &wgpu::TextureDescriptor {
-            label:              Some("Depth Texture View"),
-            size:               wgpu::Extent3d {width: width, height: height, depth_or_array_layers: 1},
-            mip_level_count:    1,
-            sample_count:       4,
-            dimension:          wgpu::TextureDimension::D2,
-            format:             wgpu::TextureFormat::Depth32Float,
-            usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats:       &[],
-        }
-    ).create_view(&wgpu::TextureViewDescriptor::default());
-}
 
 // App rendering struct
 struct App
@@ -899,4 +897,3 @@ fn main() {
     let event_loop = EventLoop::new().unwrap();
     event_loop.run_app(&mut app).unwrap();
 }
-
