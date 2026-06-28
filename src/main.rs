@@ -665,24 +665,25 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                                 else if lya_exp < -eps  {egui::Color32::from_rgb(255, 80, 80)}     // Negative exponent: RED
                                 else                    {egui::Color32::from_rgb(180, 180, 100)};  // Zero-threshold: YELLOW
 
-                    let width_scale: f32 = 80.0;
-                    let half_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
+                    let width_scale: f32 = 120.0;
+                    let max_bar_width = width_scale / 2.0;  // Scale bars based on total half of width scale
+                    let bar_width: f32 = (max_bar_width * lya_exp.abs() as f32).min(max_bar_width);
                     ui.horizontal(|ui| {
                         let (rect, _resp): (egui::Rect, egui::Response) = ui.allocate_exact_size(
                                                                             egui::Vec2{x: width_scale, y: 12.0},
                                                                             egui::Sense::HOVER
                                                                         );
-                        let bar_mid: f32 = rect.left() + (width_scale / 2.0);
+                        let bar_mid: f32 = rect.left() + max_bar_width;
                         if lya_exp > 0.0 {
                             ui.painter().rect_filled(
-                                egui::Rect::from_x_y_ranges(bar_mid..=bar_mid+half_width, rect.y_range()),
+                                egui::Rect::from_x_y_ranges(bar_mid..=bar_mid+bar_width, rect.y_range()),
                                 0.0, 
                                 egui::Color32::from_rgb(60, 200, 80)
                             );
                         }
                         else {
                             ui.painter().rect_filled(
-                                egui::Rect::from_x_y_ranges(bar_mid-half_width..=bar_mid, rect.y_range()),
+                                egui::Rect::from_x_y_ranges(bar_mid-bar_width..=bar_mid, rect.y_range()),
                                 0.0, 
                                 egui::Color32::from_rgb(200, 60, 60)
                             );
