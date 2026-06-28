@@ -101,18 +101,18 @@ impl BilliardsState
 fn trajectory_palette() -> Vec<[f32; 4]> {
     // Set up a pre-determined color pallette for the trajectory
     return vec![
-        [1.0, 0.35, 0.2,  0.9],
-        [0.2, 0.8,  1.0,  0.9],
-        [0.4, 1.0,  0.4,  0.9],
-        [1.0, 0.85, 0.1,  0.9],
-        [0.9, 0.3,  1.0,  0.9],
-        [0.1, 1.0,  0.85, 0.9],
-        [1.0, 0.6,  0.05, 0.9],
-        [0.5, 0.5,  1.0,  0.9],
-        [1.0, 0.4,  0.6,  0.9],
-        [0.3, 0.9,  0.6,  0.9],
-        [0.9, 0.9,  0.3,  0.9],
-        [0.6, 0.3,  0.9,  0.9],
+        [1.0, 0.35, 0.2,  1.0],
+        [0.2, 0.8,  1.0,  1.0],
+        [0.4, 1.0,  0.4,  1.0],
+        [1.0, 0.85, 0.1,  1.0],
+        [0.9, 0.3,  1.0,  1.0],
+        [0.1, 1.0,  0.85, 1.0],
+        [1.0, 0.6,  0.05, 1.0],
+        [0.5, 0.5,  1.0,  1.0],
+        [1.0, 0.4,  0.6,  1.0],
+        [0.3, 0.9,  0.6,  1.0],
+        [0.9, 0.9,  0.3,  1.0],
+        [0.6, 0.3,  0.9,  1.0],
     ];
 }
 
@@ -212,9 +212,20 @@ impl Renderer
         surface.configure(&device, &config);
 
         // Depth texture view
-        let depth_texture_view: wgpu::TextureView = make_depth_texture_view(&device, size.width, size.height);
+        let depth_texture_view: wgpu::TextureView = device.create_texture(
+            &wgpu::TextureDescriptor {
+                label:              Some("Depth Texture View"),
+                size:               wgpu::Extent3d {width: size.width, height: size.height, depth_or_array_layers: 1},
+                mip_level_count:    1,
+                sample_count:       4,
+                dimension:          wgpu::TextureDimension::D2,
+                format:             wgpu::TextureFormat::Depth32Float,
+                usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats:       &[],
+            }
+        ).create_view(&wgpu::TextureViewDescriptor::default());
 
-        // MSAA texture view
+        // MSAA intermediate texture view
         let msaa_resolve_texture: wgpu::TextureView = device.create_texture(
             &wgpu::TextureDescriptor {
                 label:              Some("MSAA resolve texture"),
@@ -510,7 +521,8 @@ impl Renderer
                                 label:      Some("Trajectory lines buffer"),
                                 contents:   bytemuck::cast_slice(&traj_line_data),
                                 usage:      wgpu::BufferUsages:: VERTEX,
-                            })),
+                            }
+                        )),
         };
 
         // Scoped render pass is fine, if in the future I want `RenderPass::forget_lifetime()`, I'll refactor ig
@@ -653,24 +665,25 @@ fn build_egui_ui(ui: &mut egui::Ui, state: &BilliardsState) {
                                 else if lya_exp < -eps  {egui::Color32::from_rgb(255, 80, 80)}     // Negative exponent: RED
                                 else                    {egui::Color32::from_rgb(180, 180, 100)};  // Zero-threshold: YELLOW
 
-                    let width_scale: f32 = 80.0;
-                    let half_width = (width_scale * lya_exp.abs() as f32).min(width_scale);
+                    let width_scale: f32 = 120.0;
+                    let max_bar_width = width_scale / 2.0;  // Scale bars based on total half of width scale
+                    let bar_width: f32 = (max_bar_width * lya_exp.abs() as f32).min(max_bar_width);
                     ui.horizontal(|ui| {
                         let (rect, _resp): (egui::Rect, egui::Response) = ui.allocate_exact_size(
                                                                             egui::Vec2{x: width_scale, y: 12.0},
                                                                             egui::Sense::HOVER
                                                                         );
-                        let bar_mid: f32 = rect.left() + (width_scale / 2.0);
+                        let bar_mid: f32 = rect.left() + max_bar_width;
                         if lya_exp > 0.0 {
                             ui.painter().rect_filled(
-                                egui::Rect::from_x_y_ranges(bar_mid..=bar_mid+half_width, rect.y_range()),
+                                egui::Rect::from_x_y_ranges(bar_mid..=bar_mid+bar_width, rect.y_range()),
                                 0.0, 
                                 egui::Color32::from_rgb(60, 200, 80)
                             );
                         }
                         else {
                             ui.painter().rect_filled(
-                                egui::Rect::from_x_y_ranges(bar_mid-half_width..=bar_mid, rect.y_range()),
+                                egui::Rect::from_x_y_ranges(bar_mid-bar_width..=bar_mid, rect.y_range()),
                                 0.0, 
                                 egui::Color32::from_rgb(200, 60, 60)
                             );
@@ -739,20 +752,6 @@ fn controls_display(ui: &mut egui::Ui, key: &str, description: &str) {
     });
 }
 
-fn make_depth_texture_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
-    return device.create_texture(
-        &wgpu::TextureDescriptor {
-            label:              Some("Depth Texture View"),
-            size:               wgpu::Extent3d {width: width, height: height, depth_or_array_layers: 1},
-            mip_level_count:    1,
-            sample_count:       4,
-            dimension:          wgpu::TextureDimension::D2,
-            format:             wgpu::TextureFormat::Depth32Float,
-            usage:              wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats:       &[],
-        }
-    ).create_view(&wgpu::TextureViewDescriptor::default());
-}
 
 // App rendering struct
 struct App
@@ -899,4 +898,3 @@ fn main() {
     let event_loop = EventLoop::new().unwrap();
     event_loop.run_app(&mut app).unwrap();
 }
-
