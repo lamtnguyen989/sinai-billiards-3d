@@ -20,10 +20,20 @@ use winit::{
 use rand::{SeedableRng, rngs::StdRng};
 use glam::Vec3;
 use wgpu::util::DeviceExt;
+use clap::{Parser, ValueEnum};
 
 /* Constants */
 const MAX_HISTORY: usize = 10;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
+
+/// Shader Type enum
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+pub enum ShaderType
+{
+    Wgsl,
+    Spirv
+}
+
 
 /***
 *   Billiard System state
@@ -158,7 +168,7 @@ struct Renderer
 
 impl Renderer
 {
-    async fn new(window: std::sync::Arc<Window>) -> Self {
+    async fn new(window: std::sync::Arc<Window>, shader_type: ShaderType) -> Self {
         // Creating wgpu instance 
         let instance = wgpu::Instance::new(
             wgpu::InstanceDescriptor {
@@ -239,13 +249,15 @@ impl Renderer
             }
         ).create_view(&wgpu::TextureViewDescriptor::default());
 
-        // Load shader file as a module
-        let shaders: wgpu::ShaderModule  = device.create_shader_module(
-            wgpu::ShaderModuleDescriptor {
-                label:  Some("WGSL shaders"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shaders.wgsl").into()),
-            }
-        );
+        // Load shader file as a static module
+        let shaders_descriptor: wgpu::ShaderModuleDescriptor = match shader_type {
+            ShaderType::Spirv   => wgpu::include_spirv!("shaders/shaders.spv"),
+            ShaderType::Wgsl    => wgpu::ShaderModuleDescriptor {
+                                    label:  Some("WGSL shaders"),
+                                    source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shaders.wgsl").into()),
+                                }
+        };
+        let shaders: wgpu::ShaderModule = device.create_shader_module(shaders_descriptor);
 
         // Create bindings
         let camera_buf: wgpu::Buffer = device.create_buffer(
@@ -762,6 +774,7 @@ struct App
     camera:     Option<OrbitCamera>,
     state:      BilliardsState,
     resolution: (u32, u32),
+    shader_t:   ShaderType,
 
     // Behavior helper variables
     seed:           Option<u64>,
@@ -772,13 +785,14 @@ struct App
 impl App 
 {
     // Base Constructors (only actually construct the state)
-    fn new_random(seed: u64, resolution: (u32, u32)) -> Self {
+    fn new_random(seed: u64, resolution: (u32, u32), shader_type: ShaderType) -> Self {
         return Self {
             window:     None,
             renderer:   None,
             camera:     None,
             state:      BilliardsState::new_random(seed),
             resolution: resolution,
+            shader_t:   shader_type,
 
             seed:           Some(seed),
             mouse_pressed:  false,
@@ -804,7 +818,7 @@ impl winit::application::ApplicationHandler for App
                                 .with_inner_size(winit::dpi::LogicalSize::new(width, height));
 
         let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
-        let renderer = pollster::block_on(Renderer::new(window.clone()));
+        let renderer = pollster::block_on(Renderer::new(window.clone(), self.shader_t));
 
         self.window = Some(window);
         self.renderer = Some(renderer);
@@ -885,14 +899,26 @@ impl winit::application::ApplicationHandler for App
     }
 }
 
+/// CLI Arguments
+#[derive(clap::Parser, Debug, Clone)]
+struct Args
+{
+    #[arg(long, value_enum, default_value_t = ShaderType::Wgsl)]
+    shader_type: ShaderType
+}
+
 fn main() {
     // Environment logger
     env_logger::init();
 
+    // CLI parsing
+    let args = Args::parse();
+    let shader_type = args.shader_type;
+
     // Setup app
     let (width, height): (u32, u32) = (1280, 800);
     let seed: u64 = 69;
-    let mut app = App::new_random(seed, (width, height));
+    let mut app = App::new_random(seed, (width, height), shader_type);
 
     // Event loop
     let event_loop = EventLoop::new().unwrap();
