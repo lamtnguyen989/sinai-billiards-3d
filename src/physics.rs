@@ -12,7 +12,7 @@ use crate::lyapunov::LyapunovSpectra;
 ***/
 pub const BOX_SIZE      : f32 = 1.0;
 pub const SPHERE_RADIUS : f32 = 0.25;
-pub const SPHERE_CENTER : Vec3 = Vec3::new(0.5, 0.5, 0.5);
+pub const SPHERE_CENTER : Vec3 = Vec3::splat(0.5*BOX_SIZE);
 const PHYS_EPSILON      : f32 = 1e-5;   // Physics error margin
 
 /***
@@ -168,15 +168,14 @@ fn phase_tangent_sphere_reflect(tpv: TangentPhaseVector, incoming_momentum: DVec
 }
 
 
-/*** 
-*   Billiards trajectory 
-***/
+/// Potential Trajectory Error type
 #[derive(Debug)]
 pub enum TrajectoryError {
     NoCollision,
     UnknownWallNormal
 }
 
+/// Billiards trajectory 
 #[derive(Clone)]
 pub struct Trajectory
 {
@@ -259,9 +258,7 @@ fn wall_normal(pos: Vec3) -> Option<DVec3> {
     }
 }
 
-/***
-*   Specialized handling of Lyapunov spectra for the trajectory phase
-***/
+/// Specialized handling of Lyapunov spectra for the trajectory phase
 type TrajectoryPhaseLyapunovSpectra = LyapunovSpectra<NUM_TANGENTS>;
 impl TrajectoryPhaseLyapunovSpectra
 {

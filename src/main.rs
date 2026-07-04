@@ -34,10 +34,7 @@ pub enum ShaderType
     Spirv
 }
 
-
-/***
-*   Billiard System state
-***/
+/// Billiard System state
 struct BilliardsState
 {
     traj:           Trajectory,
@@ -126,9 +123,7 @@ fn trajectory_palette() -> Vec<[f32; 4]> {
     ];
 }
 
-/***
-*   Renderer data
-***/
+/// Renderer data and context
 struct Renderer
 {
     // GPU context
@@ -765,7 +760,7 @@ fn controls_display(ui: &mut egui::Ui, key: &str, description: &str) {
 }
 
 
-// App rendering struct
+/// App rendering struct
 struct App
 {
     // Rendering context
@@ -903,22 +898,40 @@ impl winit::application::ApplicationHandler for App
 #[derive(clap::Parser, Debug, Clone)]
 struct Args
 {
+    /// Enclosing box size
+    #[arg(long, short, default_value_t = 1.0)]
+    box_size: f32,
+
+    /// Encapsulated spherical scatterer radius
+    #[arg(long, short, default_value_t = 0.25)]
+    radius: f32,
+
+    /// Particle trajectory on display
+    #[arg(long, default_value_t = 10)]
+    history: usize,
+
+    /// Simulation steps per rendering frame
+    #[arg(long, default_value_t = 1)]
+    steps_per_frame: usize,
+
+    /// Static shader source type
     #[arg(long, value_enum, default_value_t = ShaderType::Wgsl)]
-    shader_type: ShaderType
+    shader_type: ShaderType,
 }
 
+
+/// Entry point
 fn main() {
     // Environment logger
     env_logger::init();
 
     // CLI parsing
     let args = Args::parse();
-    let shader_type = args.shader_type;
 
     // Setup app
     let (width, height): (u32, u32) = (1280, 800);
     let seed: u64 = 69;
-    let mut app = App::new_random(seed, (width, height), shader_type);
+    let mut app = App::new_random(seed, (width, height), args.shader_type);
 
     // Event loop
     let event_loop = EventLoop::new().unwrap();
