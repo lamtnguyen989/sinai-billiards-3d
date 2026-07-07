@@ -1,9 +1,11 @@
+mod config;
 mod tangent;
 mod physics;
 mod ergodic;
 mod lyapunov;
 mod scene;
 
+use config::*;
 use tangent::*;
 use physics::*;
 use ergodic::*;
@@ -26,13 +28,6 @@ use clap::{Parser, ValueEnum};
 const MAX_HISTORY: usize = 10;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
 
-/// Shader Type enum
-#[derive(Debug, Clone, Copy, clap::ValueEnum)]
-pub enum ShaderType
-{
-    Wgsl,
-    Spirv
-}
 
 /// Billiard System state
 struct BilliardsState
@@ -894,30 +889,6 @@ impl winit::application::ApplicationHandler for App
     }
 }
 
-/// CLI Arguments
-#[derive(clap::Parser, Debug, Clone)]
-struct Args
-{
-    /// Enclosing box size
-    #[arg(long, short, default_value_t = 1.0)]
-    box_size: f32,
-
-    /// Encapsulated spherical scatterer radius
-    #[arg(long, short, default_value_t = 0.25)]
-    radius: f32,
-
-    /// Particle trajectory on display
-    #[arg(long, default_value_t = 10)]
-    history: usize,
-
-    /// Simulation steps per rendering frame
-    #[arg(long, default_value_t = 1)]
-    steps_per_frame: usize,
-
-    /// Static shader source type
-    #[arg(long, value_enum, default_value_t = ShaderType::Wgsl)]
-    shader_type: ShaderType,
-}
 
 
 /// Entry point
@@ -927,6 +898,7 @@ fn main() {
 
     // CLI parsing
     let args = Args::parse();
+    let phys_config = PhysicsConfig::from(args);
 
     // Setup app
     let (width, height): (u32, u32) = (1280, 800);
