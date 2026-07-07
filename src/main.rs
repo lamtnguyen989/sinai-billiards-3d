@@ -1,9 +1,11 @@
+mod config;
 mod tangent;
 mod physics;
 mod ergodic;
 mod lyapunov;
 mod scene;
 
+use config::*;
 use tangent::*;
 use physics::*;
 use ergodic::*;
@@ -26,18 +28,8 @@ use clap::{Parser, ValueEnum};
 const MAX_HISTORY: usize = 10;
 const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
 
-/// Shader Type enum
-#[derive(Debug, Clone, Copy, clap::ValueEnum)]
-pub enum ShaderType
-{
-    Wgsl,
-    Spirv
-}
 
-
-/***
-*   Billiard System state
-***/
+/// Billiard System state
 struct BilliardsState
 {
     traj:           Trajectory,
@@ -126,9 +118,7 @@ fn trajectory_palette() -> Vec<[f32; 4]> {
     ];
 }
 
-/***
-*   Renderer data
-***/
+/// Renderer data and context
 struct Renderer
 {
     // GPU context
@@ -765,7 +755,7 @@ fn controls_display(ui: &mut egui::Ui, key: &str, description: &str) {
 }
 
 
-// App rendering struct
+/// App rendering struct
 struct App
 {
     // Rendering context
@@ -899,26 +889,21 @@ impl winit::application::ApplicationHandler for App
     }
 }
 
-/// CLI Arguments
-#[derive(clap::Parser, Debug, Clone)]
-struct Args
-{
-    #[arg(long, value_enum, default_value_t = ShaderType::Wgsl)]
-    shader_type: ShaderType
-}
 
+
+/// Entry point
 fn main() {
     // Environment logger
     env_logger::init();
 
     // CLI parsing
     let args = Args::parse();
-    let shader_type = args.shader_type;
+    let phys_config = PhysicsConfig::from(args);
 
     // Setup app
     let (width, height): (u32, u32) = (1280, 800);
     let seed: u64 = 69;
-    let mut app = App::new_random(seed, (width, height), shader_type);
+    let mut app = App::new_random(seed, (width, height), args.shader_type);
 
     // Event loop
     let event_loop = EventLoop::new().unwrap();
