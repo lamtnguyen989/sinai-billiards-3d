@@ -27,7 +27,8 @@ where
     Const<N>: DimMin<Const<N>, Output = Const<N>>,
     DefaultAllocator: Allocator<Const<N>, Const<N>, Buffer<f64> = ArrayStorage<f64, N, N>> + Allocator<Const<N>>,
 {
-    // Constructor
+    /// Constructor
+    #[allow(dead_code)]
     pub fn new() -> Self {
         return Self {
             frame:      SMatrix::identity(),
@@ -37,6 +38,7 @@ where
 
     
     // Storing contents from array slice
+    #[allow(dead_code)]
     pub fn frame_from_slice(&mut self, data: &[f64], frame_layout: FrameLayout) {
         // I will need to make this a Result<_, _> later on for more comprehensive error handling
         assert_eq!(data.len(), N*N, "Incompatible slice to build frame");
@@ -49,6 +51,7 @@ where
     }
     
     #[inline]
+    #[allow(dead_code)]
     pub fn reorthorgonalize_frame(&mut self) {
         // For improving stability and correctness of the solution spectra
         let frame_qr_decomp = self.frame.clone().qr();
@@ -73,7 +76,7 @@ where
     }
 
     // Getters
-    pub fn get_spectrum(&self) -> [f64; N] {return self.spectrum;}
-    pub fn get_frame_mut(&mut self) -> &mut SMatrix<f64, N, N> {return &mut self.frame;}
-    pub fn get_frame(&self) -> SMatrix<f64, N, N> {return self.frame;}
+    #[allow(dead_code)] pub fn get_spectrum(&self) -> [f64; N] {return self.spectrum;}
+    #[allow(dead_code)] pub fn get_frame_mut(&mut self) -> &mut SMatrix<f64, N, N> {return &mut self.frame;}
+    #[allow(dead_code)] pub fn get_frame(&self) -> SMatrix<f64, N, N> {return self.frame;}
 } 

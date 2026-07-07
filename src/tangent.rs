@@ -2,9 +2,7 @@ use glam::DVec3;
 
 pub const NUM_TANGENTS: usize = 6;
 
-/***
-*   Tangent vector in the phase space (linear perturbation of a trajectory point in phase space)
-***/
+///Tangent vector in the phase space (linear perturbation of a trajectory point in phase space)
 #[derive(Clone, Copy)]
 pub struct TangentPhaseVector
 {
@@ -14,7 +12,7 @@ pub struct TangentPhaseVector
 
 impl TangentPhaseVector
 {
-    // Proper constructor
+    /// Constructor
     pub fn new(pos_tangent: DVec3, mom_tangent: DVec3) -> Self {
         return Self {
             d_position: pos_tangent,
@@ -22,7 +20,7 @@ impl TangentPhaseVector
         }
     }
 
-    // Constructing from array
+    /// Constructing from array
     pub fn from_array(arr: [f64; NUM_TANGENTS]) -> Self {
         return Self {
             d_position : DVec3::new(arr[0], arr[1], arr[2]),
@@ -30,12 +28,12 @@ impl TangentPhaseVector
         }
     }
 
-    // Dot product
+    /// Dot product
     pub fn dot(self, other: Self) -> f64 {
         return self.d_momentum.dot(other.d_momentum) + self.d_position .dot(other.d_position);
     }
 
-    // Norm
+    /// Norm
     pub fn norm(self) -> f64 {
         return self.dot(self).sqrt();
     }
@@ -47,7 +45,7 @@ impl TangentPhaseVector
                                                             self.d_momentum.x, self.d_momentum.y, self.d_momentum.z];}
 }
 
-/// Overloading operators for arithmetics ///
+// Overloading operators for arithmetics //
 // Addition 
 impl std::ops::Add for TangentPhaseVector 
 {

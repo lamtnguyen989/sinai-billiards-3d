@@ -16,9 +16,9 @@ pub const SPHERE_CENTER : Vec3 = Vec3::splat(0.5*BOX_SIZE);
 const PHYS_EPSILON      : f32 = 1e-5;   // Physics error margin
 
 /***
-*   Reflections 
+*   Physical reflections 
 ***/
-// Sphere reflections
+/// Sphere reflections
 fn reflection_sphere(pos: Vec3, vel: Vec3) -> Vec3
 {
     let n = (pos - SPHERE_CENTER).normalize();  // Surface normals
@@ -26,7 +26,7 @@ fn reflection_sphere(pos: Vec3, vel: Vec3) -> Vec3
     return reflection;
 }
 
-// Box reflection
+/// Box reflection
 fn reflection_box(pos: Vec3, vel: Vec3) -> Vec3
 {
     let mut v = vel;
@@ -210,7 +210,7 @@ impl Trajectory
     pub fn curr_lya_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra.get_spectrum();}
     pub fn get_collision_count(&self) -> usize {return self.collision_count;}
     pub fn get_positions(&self) -> Vec<glam::Vec3> {return self.positions.clone();}
-    pub fn get_velocities(&self) -> Vec<glam::Vec3> {return self.velocities.clone();}
+    #[allow(dead_code)] pub fn get_velocities(&self) -> Vec<glam::Vec3> {return self.velocities.clone();}
     pub fn get_mean_free_path(&self) -> f64 {
         if self.collision_count == 0 { return 0.0;}
         return self.distance_travelled / self.collision_count as f64;

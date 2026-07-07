@@ -22,7 +22,7 @@ use winit::{
 use rand::{SeedableRng, rngs::StdRng};
 use glam::Vec3;
 use wgpu::util::DeviceExt;
-use clap::{Parser, ValueEnum};
+use clap::{Parser};
 
 /* Constants */
 const MAX_HISTORY: usize = 10;
@@ -83,10 +83,11 @@ impl BilliardsState
     }
 
     // Reset mechanisms
-    fn reset(&mut self) -> () {
-        todo!();
-    }
+    // fn reset(&mut self) -> () {
+    //     todo!();
+    // }
 
+    #[allow(dead_code)]
     fn reset_from(&mut self, pos: Vec3, vel: Vec3) -> () {
         // Pick a new color from palllete
         let palette = trajectory_palette();

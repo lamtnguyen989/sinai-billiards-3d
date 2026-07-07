@@ -4,7 +4,7 @@ use glam::{Mat4, Vec3};
 *   Camera and shaders 
 ***/
 
-// Scene camera
+/// Scene uniform camera (GPU)
 #[repr(C)]
 #[derive(Clone, Copy, Default, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform
@@ -13,14 +13,7 @@ pub struct CameraUniform
     pub camera_pos: [f32; 4],
 }
 
-impl CameraUniform
-{
-    pub fn new() -> Self {
-        return Self::default();
-    }
-}
-
-// Orbiting data around the sphere center
+/// Orbiting data around the sphere center
 #[derive(Clone, Copy)]
 pub struct OrbitCamera
 {
@@ -34,7 +27,7 @@ pub struct OrbitCamera
 
 impl OrbitCamera
 {
-    // Constructors
+    /// Constructors
     pub fn new(box_size: f32, aspect_ratio: f32) -> Self {
         return Self {
             target:         Vec3::splat(0.5*box_size),  // Box center
@@ -46,8 +39,8 @@ impl OrbitCamera
         }
     }
 
-    // Converting the spherical coordinates to physical space (Cartesian) position
-    // IMPORTANT: We working in the spherical frame where Y-axis is up (elevation from XZ-plane)
+    /// Converting the spherical coordinates to physical space (Cartesian) position
+    /// IMPORTANT: We working in the spherical frame where Y-axis is up (elevation from XZ-plane)
     pub fn physical_position(&self) -> Vec3 {
         let (cos_yaw, sin_yaw) = (f32::cos(self.yaw), f32::sin(self.yaw));
         let (cos_pitch, sin_pitch) = (f32::cos(self.pitch), f32::sin(self.pitch));
@@ -56,7 +49,7 @@ impl OrbitCamera
         return direction.mul_add(Vec3::splat(self.distance), self.target);
     }
 
-    // Orbitting mechanism
+    /// Orbitting mechanism
     pub fn orbit(&mut self, delta_x: f32, delta_y: f32) {
         // Hard-coding numerical practicality factors (for now, dynamic way possible? But do I want to bother?)
         let sensitivity = 0.005;    
@@ -67,7 +60,7 @@ impl OrbitCamera
                         .clamp(-radians_range, radians_range);  // Coupled with the sensitivity for no reason, but fix in prod ig
     }
 
-    // Camera zoom mechanism
+    /// Camera zoom mechanism
     pub fn zoom(&mut self, delta: f32) {
         let box_size = self.target.x * 2.0; // `self.target` is always the box center
         
@@ -76,7 +69,7 @@ impl OrbitCamera
         self.distance = (self.distance - delta * 0.2 * box_size).clamp(box_size * 0.5, box_size * 5.0);
     }
 
-    // Convert orbit camera data to uniform data
+    /// Convert orbit camera data to uniform data
     pub fn to_uniform(&self) -> CameraUniform {
         // Position and perspectives
         let position = self.physical_position();
@@ -90,7 +83,7 @@ impl OrbitCamera
     }
 }
 
-// Render data: Trajectory line
+/// Render data: Trajectory line
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct LineData
@@ -115,7 +108,7 @@ impl LineData
     }
 }
 
-// Render data: Sphere
+/// Render data: Sphere
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct SphereData
@@ -138,7 +131,7 @@ impl SphereData
     }
 }
 
-// Building the sphere (on CPU since the sphere is static)
+/// Building the sphere (on CPU since the sphere is static)
 pub fn build_sphere(sphere_center: Vec3, radius: f32, stacks: u32, slices: u32) -> (Vec<SphereData>, Vec<u32>) {
     let mut vertices: Vec<SphereData> = vec![];
     let mut indices: Vec<u32> = vec![];
@@ -173,7 +166,7 @@ pub fn build_sphere(sphere_center: Vec3, radius: f32, stacks: u32, slices: u32) 
 }
 
 
-// Render data: Box
+/// Render data: Box
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct BoxData
@@ -194,7 +187,7 @@ impl BoxData
     }
 }
 
-// Build box data on CPU since again this is static
+/// Build box data on CPU since again this is static
 pub fn build_box(box_size: f32) -> Vec<BoxData> {
     let mut data: Vec<BoxData> = vec![];
     let sz = box_size;
