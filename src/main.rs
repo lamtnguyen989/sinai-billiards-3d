@@ -899,7 +899,7 @@ fn main() {
 
     // CLI parsing
     let args = Args::parse();
-    let phys_config = PhysicsConfig::from(args);
+    let _phys_config = PhysicsConfig::from(args);
 
     // Setup app
     let (width, height): (u32, u32) = (1280, 800);
