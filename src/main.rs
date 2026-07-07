@@ -34,7 +34,7 @@ struct BilliardsState
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
-    start_time:     std::time::Instant,
+    start_time:     web_time::Instant,
     frame_counter:  u64,
     trail_length:   usize,
     paused:         bool
@@ -51,7 +51,7 @@ impl BilliardsState
         return Self {
             traj:           random_trajectory(&mut rng, color),
             stats:          ErgodicStats::new(&[0.0; NUM_TANGENTS]),
-            start_time:     std::time::Instant::now(),
+            start_time:     web_time::Instant::now(),
             frame_counter:  0,
             trail_length:   MAX_HISTORY,
             paused:         true

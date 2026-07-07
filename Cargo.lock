@@ -2579,6 +2579,7 @@ dependencies = [
  "nalgebra",
  "pollster",
  "rand",
+ "web-time",
  "wgpu",
  "winit",
 ]
