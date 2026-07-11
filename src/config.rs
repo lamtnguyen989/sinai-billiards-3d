@@ -20,7 +20,7 @@ pub struct Args
     #[arg(long, short, default_value_t = 0.25)]
     radius: f32,
 
-    /// Particle trajectory on display
+    /// Particle trajectory length on display
     #[arg(long, default_value_t = 10)]
     pub history: usize,
 
@@ -48,7 +48,7 @@ impl From<Args> for PhysicsConfig
         return Self {
             box_size:       args.box_size,
             sphere_radius:  args.radius,
-            sphere_center:  Vec3::splat(args.radius / 2.0),
+            sphere_center:  Vec3::splat(args.box_size / 2.0),
         }
     }
 }
@@ -61,7 +61,7 @@ impl PhysicsConfig
         return Self {
             box_size:       box_size,
             sphere_radius:  radius,
-            sphere_center:  Vec3::splat(radius / 2.0),
+            sphere_center:  Vec3::splat(box_size / 2.0),
         }
     }
 
