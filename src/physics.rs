@@ -100,6 +100,8 @@ fn box_intersection_time(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Option<
     else                          { return None;}
 }
 
+/// Determine the type of particle collision (i.e. is it with the box wall or the sphere)
+/// and calculate the next position and velocity based on collision type.
 pub fn collision(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Option<(Vec3, Vec3, f32, bool)>
 {
     // Normalize the velocity as the intersections depends on it
@@ -298,9 +300,7 @@ fn compute_trajectory_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl F
 }
 
 
-/***
-*   Random trajectory spawner for development
-***/
+/// Random trajectory spawner for development
 pub fn random_trajectory<R: Rng>(rng: &mut R, color: [f32; 4], config: PhysicsConfig) -> Trajectory
 {
     let box_size = config.box_size();
