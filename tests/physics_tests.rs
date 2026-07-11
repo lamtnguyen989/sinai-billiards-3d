@@ -11,11 +11,12 @@ use rand::{
 };
 
 // Default physics config for quick test refactoring
-fn test_config() -> PhysicsConfig {return PhysicsConfig::new(1.0, 0.25);}
+fn test_config(box_sz: f32, radius: f32) -> PhysicsConfig {return PhysicsConfig::new(box_sz, radius);}
+fn test_config_default() -> PhysicsConfig {return PhysicsConfig::new(1.0, 0.25);}
 
 #[test]
 fn collision_remains_in_box() {
-    let config = test_config();
+    let config = test_config_default();
     let pos = Vec3::new(0.8, 0.8, 0.8);
     let vel = Vec3::new(1.0, 0.7, 0.3);
     let (new_pos, _, _, _) = collision(pos, vel, config).unwrap();
@@ -93,7 +94,7 @@ fn test_arnold_cat_lya_spectra() {
 #[test]
 fn test_random_trajectory_stays_in_box() {
     // Setup random trajectory
-    let config = test_config();
+    let config = test_config_default();
     let mut rng = StdRng::seed_from_u64(420);
     let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0], config);
     let TEST_EPSILON: f32 = 1e-6;    // Stronger than PHYS_EPSILON
@@ -117,12 +118,12 @@ fn test_random_trajectory_stays_in_box() {
 #[test]
 fn test_qualitative_trajectory_lya_spectra_properties() {
     // Setup random trajectory
-    let config = test_config();
+    let config = test_config(1.25, 0.5);
     let mut rng = StdRng::seed_from_u64(69);
     let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0], config);
 
     // Update trajectory
-    let STEPS = 10000;
+    let STEPS = 20000;  // Recall Lyapunov exponents is an infinite limit so larger iteration steps are prefered
     for k in 0..STEPS {traj.update(1).unwrap();}
 
     // Testing pairing symmetry
