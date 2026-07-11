@@ -1,16 +1,15 @@
-use clap::{Parser, ValueEnum};
 use glam::{Vec3};
 
 /// Shader Type enum
-#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+#[derive(Debug, Default, Clone, Copy, clap::ValueEnum)]
 pub enum ShaderType
 {
-    Wgsl,
+    #[default] Wgsl,
     Spirv
 }
 
 /// CLI Arguments
-#[derive(clap::Parser, Debug, Clone, Copy)]
+#[derive(clap::Parser, Default, Debug, Clone, Copy)]
 pub struct Args
 {
     /// Enclosing box size
@@ -21,7 +20,7 @@ pub struct Args
     #[arg(long, short, default_value_t = 0.25)]
     radius: f32,
 
-    /// Particle trajectory on display
+    /// Particle trajectory length on display
     #[arg(long, default_value_t = 10)]
     pub history: usize,
 
@@ -49,13 +48,23 @@ impl From<Args> for PhysicsConfig
         return Self {
             box_size:       args.box_size,
             sphere_radius:  args.radius,
-            sphere_center:  Vec3::splat(args.radius / 2.0),
+            sphere_center:  Vec3::splat(args.box_size / 2.0),
         }
     }
 }
 
 impl PhysicsConfig
 {
+    /// Constructor mainly for testing
+    #[allow(dead_code)]
+    pub fn new(box_size: f32, radius: f32) -> Self {
+        return Self {
+            box_size:       box_size,
+            sphere_radius:  radius,
+            sphere_center:  Vec3::splat(box_size / 2.0),
+        }
+    }
+
     pub fn box_size(&self) -> f32 {return self.box_size;}
     pub fn sphere_radius(&self) -> f32 {return self.sphere_radius;}
     pub fn sphere_center(&self) -> Vec3 {return self.sphere_center;}

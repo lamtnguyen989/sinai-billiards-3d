@@ -22,38 +22,37 @@ use winit::{
 use rand::{SeedableRng, rngs::StdRng};
 use glam::Vec3;
 use wgpu::util::DeviceExt;
-use clap::{Parser, ValueEnum};
-
-/* Constants */
-const MAX_HISTORY: usize = 10;
-const STEPS_PER_FRAME: usize = 1;   // Number of update steps per rendering frame
-
+use clap::{Parser};
 
 /// Billiard System state
 struct BilliardsState
 {
     traj:           Trajectory,
     stats:          ErgodicStats,
-    start_time:     std::time::Instant,
+    start_time:     web_time::Instant,
     frame_counter:  u64,
     trail_length:   usize,
+    steps_per_frame: usize,
+    config:         PhysicsConfig,
     paused:         bool
 }
 
 impl BilliardsState
 {
     // Constructors
-    fn new_random(seed: u64) -> Self {
+    fn new_random(seed: u64, config: PhysicsConfig, trail_length: usize, steps_per_frame: usize) -> Self {
         // Setting up state for random traj from seed
         let mut rng = StdRng::seed_from_u64(seed);
         let color = trajectory_palette()[0];
 
         return Self {
-            traj:           random_trajectory(&mut rng, color),
+            traj:           random_trajectory(&mut rng, color, config),
             stats:          ErgodicStats::new(&[0.0; NUM_TANGENTS]),
-            start_time:     std::time::Instant::now(),
+            start_time:     web_time::Instant::now(),
             frame_counter:  0,
-            trail_length:   MAX_HISTORY,
+            trail_length:   trail_length,
+            steps_per_frame: steps_per_frame,
+            config:         config,
             paused:         true
         };
     }
@@ -70,7 +69,7 @@ impl BilliardsState
         if self.paused {return;}
 
         // Compute results between rendering frame
-        for _k in 0..STEPS_PER_FRAME {
+        for _k in 0..self.steps_per_frame {
             match self.traj.update(self.trail_length) {
                 Ok(_)   => {},
                 Err(e)  => eprintln!("Trajectory update failed. Error: {:?}", e),
@@ -83,17 +82,18 @@ impl BilliardsState
     }
 
     // Reset mechanisms
-    fn reset(&mut self) -> () {
-        todo!();
-    }
+    // fn reset(&mut self) -> () {
+    //     todo!();
+    // }
 
+    #[allow(dead_code)]
     fn reset_from(&mut self, pos: Vec3, vel: Vec3) -> () {
         // Pick a new color from palllete
         let palette = trajectory_palette();
         let color = palette[(self.frame_counter as usize) % palette.len()];
 
         // Reset internal states
-        self.traj = Trajectory::new(pos, vel, color);
+        self.traj = Trajectory::new(pos, vel, color, self.config);
         self.stats = ErgodicStats::new(&[0.0; NUM_TANGENTS]);
         self.frame_counter = 0;
     }
@@ -158,7 +158,7 @@ struct Renderer
 
 impl Renderer
 {
-    async fn new(window: std::sync::Arc<Window>, shader_type: ShaderType) -> Self {
+    async fn new(window: std::sync::Arc<Window>, shader_type: ShaderType, phys_config: PhysicsConfig) -> Self {
         // Creating wgpu instance 
         let instance = wgpu::Instance::new(
             wgpu::InstanceDescriptor {
@@ -427,7 +427,7 @@ impl Renderer
 
         // Build and upload sphere geometry data
         let (sph_stacks, sph_slices) = (64_u32, 64_u32);
-        let (sph_vert, sph_idx): (Vec<SphereData>, Vec<u32>) = build_sphere(SPHERE_CENTER, SPHERE_RADIUS, sph_stacks, sph_slices);
+        let (sph_vert, sph_idx): (Vec<SphereData>, Vec<u32>) = build_sphere(phys_config.sphere_center(), phys_config.sphere_radius(), sph_stacks, sph_slices);
         let sphere_verts_buf: wgpu::Buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label:      Some("Sphere Vertex Buffer"),
@@ -445,7 +445,7 @@ impl Renderer
         );
 
         // Build and upload box data
-        let box_verts: Vec<BoxData> = build_box(BOX_SIZE);
+        let box_verts: Vec<BoxData> = build_box(phys_config.box_size());
         let box_vertex_buf: wgpu::Buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label:      Some("Box Vertex Buffer"),
@@ -765,6 +765,9 @@ struct App
     state:      BilliardsState,
     resolution: (u32, u32),
     shader_t:   ShaderType,
+    config:     PhysicsConfig,
+    trail_length:    usize,
+    steps_per_frame: usize,
 
     // Behavior helper variables
     seed:           Option<u64>,
@@ -775,14 +778,18 @@ struct App
 impl App 
 {
     // Base Constructors (only actually construct the state)
-    fn new_random(seed: u64, resolution: (u32, u32), shader_type: ShaderType) -> Self {
+    fn new_random(seed: u64, resolution: (u32, u32), shader_type: ShaderType, 
+                  config: PhysicsConfig, trail_length: usize, steps_per_frame: usize) -> Self {
         return Self {
             window:     None,
             renderer:   None,
             camera:     None,
-            state:      BilliardsState::new_random(seed),
+            state:      BilliardsState::new_random(seed, config, trail_length, steps_per_frame),
             resolution: resolution,
             shader_t:   shader_type,
+            config:     config,
+            trail_length:    trail_length,
+            steps_per_frame: steps_per_frame,
 
             seed:           Some(seed),
             mouse_pressed:  false,
@@ -808,11 +815,11 @@ impl winit::application::ApplicationHandler for App
                                 .with_inner_size(winit::dpi::LogicalSize::new(width, height));
 
         let window = Arc::new(event_loop.create_window(window_attrs).unwrap());
-        let renderer = pollster::block_on(Renderer::new(window.clone(), self.shader_t));
+        let renderer = pollster::block_on(Renderer::new(window.clone(), self.shader_t, self.config));
 
         self.window = Some(window);
         self.renderer = Some(renderer);
-        self.camera = Some(OrbitCamera::new(BOX_SIZE, width as f32 / height as f32));
+        self.camera = Some(OrbitCamera::new(self.config.box_size(), width as f32 / height as f32));
     }
 
     // About to wait handling
@@ -856,7 +863,7 @@ impl winit::application::ApplicationHandler for App
             } => {
                 match kc {
                     KeyCode::Space  => self.state.paused = !self.state.paused,
-                    KeyCode::KeyR => self.state = BilliardsState::new_random(self.seed.unwrap()),
+                    KeyCode::KeyR => self.state = BilliardsState::new_random(self.seed.unwrap(), self.config, self.trail_length, self.steps_per_frame),
                     _ => {}
                 }
             },
@@ -903,7 +910,8 @@ fn main() {
     // Setup app
     let (width, height): (u32, u32) = (1280, 800);
     let seed: u64 = 69;
-    let mut app = App::new_random(seed, (width, height), args.shader_type);
+    let mut app = App::new_random(seed, (width, height), 
+                                args.shader_type, phys_config, args.history, args.steps_per_frame);
 
     // Event loop
     let event_loop = EventLoop::new().unwrap();

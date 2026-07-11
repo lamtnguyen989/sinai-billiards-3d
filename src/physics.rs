@@ -4,35 +4,34 @@ use nalgebra::{Matrix6};
 
 use crate::tangent::{NUM_TANGENTS, TangentPhaseVector};
 use crate::lyapunov::LyapunovSpectra;
+use crate::config::{PhysicsConfig};
 
 /// Note the model assume unit mass so velocities and momenta are interchangable
 
 /*** 
-*   Geometry constants
+*   Constants
 ***/
-pub const BOX_SIZE      : f32 = 1.0;
-pub const SPHERE_RADIUS : f32 = 0.25;
-pub const SPHERE_CENTER : Vec3 = Vec3::splat(0.5*BOX_SIZE);
 const PHYS_EPSILON      : f32 = 1e-5;   // Physics error margin
 
 /***
-*   Reflections 
+*   Physical reflections 
 ***/
-// Sphere reflections
-fn reflection_sphere(pos: Vec3, vel: Vec3) -> Vec3
+/// Sphere reflections
+fn reflection_sphere(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Vec3
 {
-    let n = (pos - SPHERE_CENTER).normalize();  // Surface normals
+    let n = (pos - config.sphere_center()).normalize();  // Surface normals
     let reflection = vel - 2.0*vel.dot(n) * n;
     return reflection;
 }
 
-// Box reflection
-fn reflection_box(pos: Vec3, vel: Vec3) -> Vec3
+/// Box reflection
+fn reflection_box(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Vec3
 {
+    let box_size = config.box_size();
     let mut v = vel;
-    if pos.x < PHYS_EPSILON || pos.x > (BOX_SIZE - PHYS_EPSILON) {v.x = -v.x;}
-    if pos.y < PHYS_EPSILON || pos.y > (BOX_SIZE - PHYS_EPSILON) {v.y = -v.y;}
-    if pos.z < PHYS_EPSILON || pos.z > (BOX_SIZE - PHYS_EPSILON) {v.z = -v.z;}
+    if pos.x < PHYS_EPSILON || pos.x > (box_size - PHYS_EPSILON) {v.x = -v.x;}
+    if pos.y < PHYS_EPSILON || pos.y > (box_size - PHYS_EPSILON) {v.y = -v.y;}
+    if pos.z < PHYS_EPSILON || pos.z > (box_size - PHYS_EPSILON) {v.z = -v.z;}
 
     return v;
 }
@@ -46,14 +45,15 @@ fn reflection_box(pos: Vec3, vel: Vec3) -> Vec3
 //      P is the relative position vector towards the sphere center, 
 //      V is the velocity vector (assumed to be normalized for easier math)
 //      r is the sphere radius scalar
-fn sphere_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
+fn sphere_intersection_time(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Option<f32>
 {
     // Relative position offset towards the sphere center
-    let center_offset: Vec3 = pos - SPHERE_CENTER;
+    let center_offset: Vec3 = pos - config.sphere_center();
+    let sphere_radius = config.sphere_radius();
 
     // Calculate discriminant to find solutions
     let b: f32 = 2.0*center_offset.dot(vel);
-    let c: f32 = center_offset.length_squared() - SPHERE_RADIUS*SPHERE_RADIUS;
+    let c: f32 = center_offset.length_squared() - sphere_radius*sphere_radius;
     let discriminant: f32 = b*b - 4.0*c;
 
     // Solution existence checks first (i.e. does it actually hit the sphere?)
@@ -73,8 +73,9 @@ fn sphere_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
 //      p_k + t_0*v_k = 0     and     p_k + t_L*v_k = 0
 // to find the entry and exit time candidates for the dimensions.
 // From here, just compute the range within all the direction for the time the ray being in the cube.
-fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
+fn box_intersection_time(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Option<f32>
 {
+    let box_size = config.box_size();
     let mut t_min = PHYS_EPSILON;
     let mut t_max = 1e10_f32;
 
@@ -83,10 +84,10 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
         let p = pos[k];
 
         if v.abs() < PHYS_EPSILON {
-            if p < 0.0 || p > BOX_SIZE { return None;}
+            if p < 0.0 || p > box_size { return None;}
             continue;
         }
-        let (t0, t1) : (f32, f32) = (-p/v, (BOX_SIZE - p)/v);
+        let (t0, t1) : (f32, f32) = (-p/v, (box_size - p)/v);
         let (lo, hi) =  if t0 < t1 { (t0, t1) } else { (t1, t0) };
         
         t_min = f32::max(t_min, lo);
@@ -99,14 +100,16 @@ fn box_intersection_time(pos: Vec3, vel: Vec3) -> Option<f32>
     else                          { return None;}
 }
 
-pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3, f32, bool)>
+/// Determine the type of particle collision (i.e. is it with the box wall or the sphere)
+/// and calculate the next position and velocity based on collision type.
+pub fn collision(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Option<(Vec3, Vec3, f32, bool)>
 {
     // Normalize the velocity as the intersections depends on it
     let v = vel.normalize();
 
     // Compute the intersection times
-    let t_sph : Option<f32> = sphere_intersection_time(pos, v);
-    let t_box : Option<f32> = box_intersection_time(pos, v);
+    let t_sph : Option<f32> = sphere_intersection_time(pos, v, config);
+    let t_box : Option<f32> = box_intersection_time(pos, v, config);
 
     // Process the intersection times
     let (t, hit_sphere) : (f32, bool) = match(t_sph, t_box) {
@@ -119,8 +122,8 @@ pub fn collision(pos: Vec3, vel: Vec3) -> Option<(Vec3, Vec3, f32, bool)>
     
     // Compute the new position and velocity
     let new_pos : Vec3 = pos + t*v;
-    let new_vel : Vec3 = if hit_sphere {reflection_sphere(new_pos, v)} 
-                        else {reflection_box(new_pos, v)};
+    let new_vel : Vec3 = if hit_sphere {reflection_sphere(new_pos, v, config)} 
+                        else {reflection_box(new_pos, v, config)};
 
     return Some((new_pos, new_vel, t, hit_sphere));
 }
@@ -185,6 +188,7 @@ pub struct Trajectory
     lyapunov_spectra:       TrajectoryPhaseLyapunovSpectra,
     collision_count:        usize,
     distance_travelled:     f64,    // This is also the total simulation time due to |x| = t*|v| and we are using unit velocity |v| = 1
+    config:                 PhysicsConfig,
 
     // Extra rendering data
     pub color:              [f32; 4],   // RGBA values
@@ -193,13 +197,14 @@ pub struct Trajectory
 impl Trajectory
 {
     // Constructor
-    pub fn new(pos: Vec3, vel: Vec3, color: [f32; 4]) -> Self {
+    pub fn new(pos: Vec3, vel: Vec3, color: [f32; 4], config: PhysicsConfig) -> Self {
         return Self {
             positions:              vec![pos],
             velocities:             vec![vel.normalize()],
             lyapunov_spectra:       TrajectoryPhaseLyapunovSpectra::new(),
             collision_count:        0,
             distance_travelled:     0.0,
+            config:                 config,
             color:                  color
         }
     }
@@ -210,7 +215,9 @@ impl Trajectory
     pub fn curr_lya_spectra(&self) -> [f64; NUM_TANGENTS] {return self.lyapunov_spectra.get_spectrum();}
     pub fn get_collision_count(&self) -> usize {return self.collision_count;}
     pub fn get_positions(&self) -> Vec<glam::Vec3> {return self.positions.clone();}
-    pub fn get_velocities(&self) -> Vec<glam::Vec3> {return self.velocities.clone();}
+    pub fn get_config(&self) -> PhysicsConfig {return self.config;}
+    #[allow(dead_code)] pub fn get_velocities(&self) -> Vec<glam::Vec3> {return self.velocities.clone();}
+
     pub fn get_mean_free_path(&self) -> f64 {
         if self.collision_count == 0 { return 0.0;}
         return self.distance_travelled / self.collision_count as f64;
@@ -223,11 +230,11 @@ impl Trajectory
         let vel = self.current_vel();
 
         // Compute the next collision phase point
-        let (new_pos, new_vel, t, hit_sphere) = collision(pos, vel).ok_or(TrajectoryError::NoCollision)?;
+        let (new_pos, new_vel, t, hit_sphere) = collision(pos, vel, self.config).ok_or(TrajectoryError::NoCollision)?;
 
         // Compute the normal vectors
-        let n_wall: DVec3 = wall_normal(new_pos).ok_or(TrajectoryError::UnknownWallNormal)?;
-        let n_sphere: DVec3 = (new_pos - SPHERE_CENTER).as_dvec3() / SPHERE_RADIUS as f64;
+        let n_wall: DVec3 = wall_normal(new_pos, self.config).ok_or(TrajectoryError::UnknownWallNormal)?;
+        let n_sphere: DVec3 = (new_pos - self.config.sphere_center()).as_dvec3() / self.config.sphere_radius() as f64;
 
         // Update 
         let incoming_vel = vel.as_dvec3();
@@ -238,15 +245,17 @@ impl Trajectory
         self.velocities.push(new_vel);
         self.collision_count += 1;
         self.distance_travelled += t as f64;
-        self.lyapunov_spectra.update_spectrum(t as f64, hit_sphere, incoming_vel, n_wall, n_sphere, self.distance_travelled);
+        self.lyapunov_spectra.update_spectrum(t as f64, hit_sphere, incoming_vel, n_wall, n_sphere, 
+                                                self.config.sphere_radius() as f64, self.distance_travelled);
 
         Ok(())
     }
 }
 
 // Find nearest wall's outward normal to the trajectory
-fn wall_normal(pos: Vec3) -> Option<DVec3> {
-    let wall_distances: [f32; 3] = std::array::from_fn(|k| {pos[k].min(BOX_SIZE - pos[k])});
+fn wall_normal(pos: Vec3, config: PhysicsConfig) -> Option<DVec3> {
+    let box_size = config.box_size();
+    let wall_distances: [f32; 3] = std::array::from_fn(|k| {pos[k].min(box_size - pos[k])});
     match wall_distances.iter().enumerate()
                         .min_by(|(_, a), (_, b)| {a.partial_cmp(b).unwrap()})
                         .unwrap().0 
@@ -265,12 +274,12 @@ impl TrajectoryPhaseLyapunovSpectra
     // Compute Lyapunov spectrum after a collision
     pub fn update_spectrum(&mut self, t: f64, hit_sphere: bool,
                         momentum_in: DVec3, n_wall: DVec3, n_sphere: DVec3,
-                        total_time: f64) 
+                        sphere_radius: f64, total_time: f64) 
     {
         // Compute the phase frame both in free-flight and after collision
         compute_trajectory_phase_frame(&mut self.get_frame_mut(), |w| {phase_tangent_free_flight(w, t)});
         compute_trajectory_phase_frame(&mut self.get_frame_mut(), |w| {
-            if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, SPHERE_RADIUS as f64)}
+            if hit_sphere   {phase_tangent_sphere_reflect(w, momentum_in, n_sphere, sphere_radius)}
             else            {phase_tangent_wall_reflect(w, n_wall)}
         });
 
@@ -291,16 +300,16 @@ fn compute_trajectory_phase_frame(frame: &mut Matrix6<f64>, compute_type: impl F
 }
 
 
-/***
-*   Random trajectory spawner for development
-***/
-pub fn random_trajectory<R: Rng>(rng: &mut R, color: [f32; 4]) -> Trajectory
+/// Random trajectory spawner for development
+pub fn random_trajectory<R: Rng>(rng: &mut R, color: [f32; 4], config: PhysicsConfig) -> Trajectory
 {
+    let box_size = config.box_size();
+
     // Random position outside the sphere (not really, but this is for testing purposes)
     let p = Vec3::new(
-        0.8*BOX_SIZE * rng.random::<f32>() + BOX_SIZE * 0.1,
-        0.8*BOX_SIZE * rng.random::<f32>() + BOX_SIZE * 0.1,
-        0.8*BOX_SIZE * rng.random::<f32>() + BOX_SIZE * 0.1,
+        0.8*box_size * rng.random::<f32>() + box_size * 0.1,
+        0.8*box_size * rng.random::<f32>() + box_size * 0.1,
+        0.8*box_size * rng.random::<f32>() + box_size * 0.1,
     );
 
     // Random unit velocity vector (could leave it random here due to constructor normalize no matter what, but again testing purposes)
@@ -310,5 +319,5 @@ pub fn random_trajectory<R: Rng>(rng: &mut R, color: [f32; 4]) -> Trajectory
         rng.random_range(-1.0..1.0),
     ).normalize();
 
-    return Trajectory::new(p, random_unit_vel, color);
+    return Trajectory::new(p, random_unit_vel, color, config);
 }

@@ -1,6 +1,7 @@
 use billiards_logic::physics::*;
 use billiards_logic::tangent::*;
 use billiards_logic::lyapunov::*;
+use billiards_logic::config::{PhysicsConfig};
 
 use glam::{DVec3, Vec3};
 use nalgebra::{SMatrix};
@@ -9,16 +10,20 @@ use rand::{
     rngs::StdRng
 };
 
+// Default physics config for quick test refactoring
+fn test_config(box_sz: f32, radius: f32) -> PhysicsConfig {return PhysicsConfig::new(box_sz, radius);}
+fn test_config_default() -> PhysicsConfig {return PhysicsConfig::new(1.0, 0.25);}
 
 #[test]
 fn collision_remains_in_box() {
+    let config = test_config_default();
     let pos = Vec3::new(0.8, 0.8, 0.8);
     let vel = Vec3::new(1.0, 0.7, 0.3);
-    let (new_pos, _, _, _) = collision(pos, vel).unwrap();
+    let (new_pos, _, _, _) = collision(pos, vel, config).unwrap();
     
-    assert!(new_pos.x >= 0.0 && new_pos.x <= BOX_SIZE);
-    assert!(new_pos.y >= 0.0 && new_pos.y <= BOX_SIZE);
-    assert!(new_pos.z >= 0.0 && new_pos.z <= BOX_SIZE);
+    assert!(new_pos.x >= 0.0 && new_pos.x <= config.box_size());
+    assert!(new_pos.y >= 0.0 && new_pos.y <= config.box_size());
+    assert!(new_pos.z >= 0.0 && new_pos.z <= config.box_size());
 }
 
 #[test]
@@ -89,8 +94,9 @@ fn test_arnold_cat_lya_spectra() {
 #[test]
 fn test_random_trajectory_stays_in_box() {
     // Setup random trajectory
+    let config = test_config_default();
     let mut rng = StdRng::seed_from_u64(420);
-    let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0]);
+    let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0], config);
     let TEST_EPSILON: f32 = 1e-6;    // Stronger than PHYS_EPSILON
     let STEPS = 1000;
 
@@ -100,9 +106,9 @@ fn test_random_trajectory_stays_in_box() {
         let p = traj.current_pos();
         let v = traj.current_vel();
         assert!(
-            p.x >= -TEST_EPSILON && p.x <= (BOX_SIZE + TEST_EPSILON) &&
-            p.y >= -TEST_EPSILON && p.y <= (BOX_SIZE + TEST_EPSILON) &&
-            p.z >= -TEST_EPSILON && p.z <= (BOX_SIZE + TEST_EPSILON),
+            p.x >= -TEST_EPSILON && p.x <= (config.box_size() + TEST_EPSILON) &&
+            p.y >= -TEST_EPSILON && p.y <= (config.box_size() + TEST_EPSILON) &&
+            p.z >= -TEST_EPSILON && p.z <= (config.box_size() + TEST_EPSILON),
             "Escaped box at step {}: pos={:?} vel={:?}", k, p, v
         );
     }
@@ -112,11 +118,12 @@ fn test_random_trajectory_stays_in_box() {
 #[test]
 fn test_qualitative_trajectory_lya_spectra_properties() {
     // Setup random trajectory
+    let config = test_config(1.25, 0.5);
     let mut rng = StdRng::seed_from_u64(69);
-    let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0]);
+    let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0], config);
 
     // Update trajectory
-    let STEPS = 10000;
+    let STEPS = 20000;  // Recall Lyapunov exponents is an infinite limit so larger iteration steps are prefered
     for k in 0..STEPS {traj.update(1).unwrap();}
 
     // Testing pairing symmetry
