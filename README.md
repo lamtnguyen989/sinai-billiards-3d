@@ -20,4 +20,23 @@ Finally, as this is also a personal project, on top of making a high-performance
 ## Requirements and Usage
 - Install `rust` via [rustup](https://rust-lang.org/tools/install/).
 - (If you want to make an update to the Slang [shader source](src/shaders/)) Install a [release](https://shader-slang.org/tools/) of the `slangc` shader compiler for the Slang shading language and compile to WGSL with `./scripts/compile-shaders.sh` or use the [guide](https://shader-slang.org/slang/user-guide/compiling).
-- Build and run with `cargo run --release`.
+- Build and run with `cargo run --release` with the following options for command-line interface
+```
+CLI Arguments
+
+Usage: sinai-billiards-3d [OPTIONS]
+
+Options:
+  -b, --box-size <BOX_SIZE>
+          Enclosing box size [default: 1]
+  -r, --radius <RADIUS>
+          Encapsulated spherical scatterer radius [default: 0.25]
+      --history <HISTORY>
+          Particle trajectory collision history on display [default: 10]
+      --steps-per-frame <STEPS_PER_FRAME>
+          Simulation steps per rendering frame [default: 1]
+      --shader-type <SHADER_TYPE>
+          Static shader source type [default: wgsl] [possible values: wgsl, spirv]
+  -h, --help
+          Print help
+```

@@ -20,7 +20,7 @@ pub struct Args
     #[arg(long, short, default_value_t = 0.25)]
     radius: f32,
 
-    /// Particle trajectory length on display
+    /// Particle trajectory collision history on display
     #[arg(long, default_value_t = 10)]
     pub history: usize,
 
