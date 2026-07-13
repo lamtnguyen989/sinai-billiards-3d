@@ -22,7 +22,6 @@ Finally, as this is also a personal project, on top of making a high-performance
 - (If you want to make an update to the Slang [shader source](src/shaders/)) Install a [release](https://shader-slang.org/tools/) of the `slangc` shader compiler for the Slang shading language and compile to WGSL with `./scripts/compile-shaders.sh` or use the [guide](https://shader-slang.org/slang/user-guide/compiling).
 - Build and run with `cargo run --release` with the following options for command-line interface
 ```
-$ ./target/release/sinai-billiards-3d -h
 CLI Arguments
 
 Usage: sinai-billiards-3d [OPTIONS]
