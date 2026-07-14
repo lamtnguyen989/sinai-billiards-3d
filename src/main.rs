@@ -899,13 +899,18 @@ impl winit::application::ApplicationHandler for App
 
 
 /// Entry point
-fn main() {
+fn main() 
+{
     // Environment logger
     env_logger::init();
 
     // CLI parsing
     let args = Args::parse();
     let phys_config = PhysicsConfig::from(args);
+
+    if phys_config.sphere_radius() > phys_config.box_size() / 2.0 {
+        log::warn!("The spherical scatterer is not enclosed with the box!");
+    }
 
     // Setup app
     let (width, height): (u32, u32) = (1280, 800);

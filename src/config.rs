@@ -12,11 +12,11 @@ pub enum ShaderType
 #[derive(clap::Parser, Default, Debug, Clone, Copy)]
 pub struct Args
 {
-    /// Enclosing box size
+    /// Box size
     #[arg(long, short, default_value_t = 1.0)]
     box_size: f32,
 
-    /// Encapsulated spherical scatterer radius
+    /// Spherical scatterer radius
     #[arg(long, short, default_value_t = 0.25)]
     radius: f32,
 

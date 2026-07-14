@@ -9,6 +9,7 @@ use nalgebra::{
 ***/
 
 // Enum to denote how the frame which is a matrix will be laid out in memory
+#[allow(unused)]
 pub enum FrameLayout {
     ColumnMajor, 
     RowMajor
