@@ -28,9 +28,9 @@ Usage: sinai-billiards-3d [OPTIONS]
 
 Options:
   -b, --box-size <BOX_SIZE>
-          Enclosing box size [default: 1]
+          Box size [default: 1]
   -r, --radius <RADIUS>
-          Encapsulated spherical scatterer radius [default: 0.25]
+          Spherical scatterer radius [default: 0.25]
       --history <HISTORY>
           Particle trajectory collision history on display [default: 10]
       --steps-per-frame <STEPS_PER_FRAME>
