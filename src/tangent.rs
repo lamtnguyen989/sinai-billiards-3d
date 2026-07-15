@@ -2,7 +2,7 @@ use glam::DVec3;
 
 pub const NUM_TANGENTS: usize = 6;
 
-///Tangent vector in the phase space (linear perturbation of a trajectory point in phase space)
+/// Tangent vector in the phase space (linear perturbation of a trajectory point in phase space)
 #[derive(Clone, Copy)]
 pub struct TangentPhaseVector
 {
@@ -38,9 +38,13 @@ impl TangentPhaseVector
         return self.dot(self).sqrt();
     }
 
-    // Getters
+    /// Position tangent getter
     pub fn get_position_tangent(self) -> DVec3 {return self.d_position;}
+
+    /// Momentum tangent getter
     pub fn get_momentum_tangent(self) -> DVec3 {return self.d_momentum;}
+
+    /// Export tangent vector as an array
     pub fn as_array(&self) -> [f64; NUM_TANGENTS] {return [ self.d_position.x, self.d_position.y, self.d_position.z, 
                                                             self.d_momentum.x, self.d_momentum.y, self.d_momentum.z];}
 }

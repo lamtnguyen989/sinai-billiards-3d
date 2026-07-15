@@ -6,17 +6,15 @@ use crate::tangent::{NUM_TANGENTS, TangentPhaseVector};
 use crate::lyapunov::LyapunovSpectra;
 use crate::config::{PhysicsConfig};
 
-/// Note the model assume unit mass so velocities and momenta are interchangable
-
-/*** 
-*   Constants
-***/
-const PHYS_EPSILON      : f32 = 1e-5;   // Physics error margin
-
 /***
-*   Physical reflections 
+*   Note the model assume unit mass so velocities and momenta are interchangable
 ***/
-/// Sphere reflections
+
+/// Physics error margin
+const PHYS_EPSILON      : f32 = 1e-5;
+
+
+/// Sphere physical reflections
 fn reflection_sphere(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Vec3
 {
     let n = (pos - config.sphere_center()).normalize();  // Surface normals
@@ -24,7 +22,7 @@ fn reflection_sphere(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Vec3
     return reflection;
 }
 
-/// Box reflection
+/// Box physical reflection
 fn reflection_box(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Vec3
 {
     let box_size = config.box_size();
@@ -39,12 +37,12 @@ fn reflection_box(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Vec3
 /***
 *   Collision computations
 ***/
-// Solving the intersection time of the trajectory to the sphere via the equation for t
-//      |P + tV|^2 = r^2
-// where: 
-//      P is the relative position vector towards the sphere center, 
-//      V is the velocity vector (assumed to be normalized for easier math)
-//      r is the sphere radius scalar
+/// Solving the intersection time of the trajectory to the sphere via the equation for t
+///     |P + tV|^2 = r^2
+/// where: 
+///     P is the relative position vector towards the sphere center, 
+///     V is the velocity vector (assumed to be normalized for easier math)
+///     r is the sphere radius scalar
 fn sphere_intersection_time(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Option<f32>
 {
     // Relative position offset towards the sphere center
@@ -67,12 +65,12 @@ fn sphere_intersection_time(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Opti
     
 }
 
-// Finding the trajectory's intersection time to the boundary box
-// The box model is [0, L]^3 where L = BOX_SIZE
-// Essentially for each dimension k in {x,y,z}, solve:
-//      p_k + t_0*v_k = 0     and     p_k + t_L*v_k = 0
-// to find the entry and exit time candidates for the dimensions.
-// From here, just compute the range within all the direction for the time the ray being in the cube.
+/// Finding the trajectory's intersection time to the boundary box
+/// The box model is [0, L]^3 where L = BOX_SIZE
+/// Essentially for each dimension k in {x,y,z}, solve:
+///     p_k + t_0*v_k = 0     and     p_k + t_L*v_k = 0
+/// to find the entry and exit time candidates for the dimensions.
+/// From here, just compute the range within all the direction for the time the ray being in the cube.
 fn box_intersection_time(pos: Vec3, vel: Vec3, config: PhysicsConfig) -> Option<f32>
 {
     let box_size = config.box_size();

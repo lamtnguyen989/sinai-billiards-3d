@@ -2,8 +2,7 @@ use crate::tangent::*;
 use crate::physics::*;
 
 
-/* Ergodic Statistics */
-// Need to make generic version of Ergodic Stat based on Lyapunov spectra length purely for testing
+/// Ergodic Statistics computation handler based on Lyapunov spectra
 #[derive(Clone)]
 pub struct ErgodicStatistics<const N: usize>
 {
@@ -14,6 +13,7 @@ pub struct ErgodicStatistics<const N: usize>
 
 impl<const N: usize> ErgodicStatistics<N>
 {
+    /// Constructor
     pub fn new(lya_spectra: &[f64; N]) -> Self {
         // Make a mutable copy of the specta and sort it
         let mut spectra = *lya_spectra;
@@ -30,18 +30,24 @@ impl<const N: usize> ErgodicStatistics<N>
         };
     }
 
-    // Getters
+    /// Getter for Lyapunov spectra that builds the statistics hander
     pub fn get_lyapunov_spectra(&self) -> [f64; N] {return self.lyapunov_spectra;}
+
+    /// Getter for the Lyapunov time
     pub fn get_lyapunov_time(&self) -> f64 {if self.lyapunov_spectra[0] == 0.0 {return 0.0;} else {return 1.0/self.lyapunov_spectra[0];}}
+    
+    /// Kolmogorov-Sinai entropy getter
     pub fn get_ks_entropy(&self) -> f64 {return self.ks_entropy;}
+
+    /// Kaplan-Yorke dimension getter
     pub fn get_ky_dim(&self) -> f64 {return self.kaplan_yorke_dim;}
 }
 
-// The main type we will be using for ergodic computations of the billiards
+/// The main type we will be using for ergodic computations of the billiards
 pub type ErgodicStats = ErgodicStatistics<NUM_TANGENTS>;
 impl ErgodicStats
 {
-    // Compute ergodic quantities from the trajectory
+    /// Compute ergodic quantities from the trajectory
     pub fn compute_from_trajectory(traj: &Trajectory) -> Self {
 
         // Get and sort the Lyapunov spectra
@@ -60,9 +66,9 @@ impl ErgodicStats
     }
 }
 
-// Kaplan-Yorke dimension
-// IMPORTANT: This assume we have sorted the spectra
-// Also this is most likely integer-valued for this billiards model although it is worth it to give it a proper treatment
+/// Kaplan-Yorke dimension computation
+/// IMPORTANT: This assume we have sorted the spectra
+/// Also this is most likely integer-valued for this billiards model although it is worth it to give it a proper treatment
 fn kaplan_yorke_dim(lya_spectra: &[f64]) -> f64
 {
     let mut sum: f64 = 0.0;
