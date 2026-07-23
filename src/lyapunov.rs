@@ -4,18 +4,14 @@ use nalgebra::{
     ArrayStorage,
 };
 
-/***
-*  Lyapunov spectra computation handler
-***/
-
-// Enum to denote how the frame which is a matrix will be laid out in memory
+/// Enum to denote how the frame which is a matrix will be laid out in memory
 #[allow(unused)]
 pub enum FrameLayout {
     ColumnMajor, 
     RowMajor
 }
 
-// Actual Lyapunov spectra computation handler
+/// Lyapunov spectra computation handler
 #[derive(Clone)]
 pub struct LyapunovSpectra<const N: usize>
 {
@@ -38,7 +34,7 @@ where
     }
 
     
-    // Storing contents from array slice
+    /// Storing contents from array slice
     #[allow(dead_code)]
     pub fn frame_from_slice(&mut self, data: &[f64], frame_layout: FrameLayout) {
         // I will need to make this a Result<_, _> later on for more comprehensive error handling
@@ -53,13 +49,13 @@ where
     
     #[inline]
     #[allow(dead_code)]
+    /// Re-orthorgonalize internal phase frame via QR-decomposition
     pub fn reorthorgonalize_frame(&mut self) {
-        // For improving stability and correctness of the solution spectra
         let frame_qr_decomp = self.frame.clone().qr();
         self.frame.copy_from(&frame_qr_decomp.q());
     }
 
-    // Compute the QR-decomposition of internal frame to get the Lyapunov spectra
+    /// Compute the Lyapunov spectra via QR-decomposition of internal frame
     #[inline]
     pub fn compute_from_frame(&mut self, t: f64, total_time: f64) -> () {
         // Take QR-decomposition of the frame
@@ -76,8 +72,12 @@ where
         for k in 0..N {self.spectrum[k] += (increments[k] - self.spectrum[k]*t) / total_time;}
     }
 
-    // Getters
+    /// Internal Lyapunov spectra getter
     #[allow(dead_code)] pub fn get_spectrum(&self) -> [f64; N] {return self.spectrum;}
+
+    /// Mutable reference to internal phase frame getter
     #[allow(dead_code)] pub fn get_frame_mut(&mut self) -> &mut SMatrix<f64, N, N> {return &mut self.frame;}
+
+    /// Internal phase frame getter (non-mutable)
     #[allow(dead_code)] pub fn get_frame(&self) -> SMatrix<f64, N, N> {return self.frame;}
 } 

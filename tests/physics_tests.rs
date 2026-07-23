@@ -66,8 +66,8 @@ fn test_phase_tangent_arithmetic() {
 #[test]
 fn test_arnold_cat_lya_spectra() {
     // Practical parameters
-    let MARGIN_OF_ERROR: f64 = 1e-5;
-    let ITERATION_STEPS = 1e5 as usize;
+    let margin_of_error: f64 = 1e-5;
+    let simulation_steps = 1e5 as usize;
 
     // Setting spectra object and base map matrix
     let arnold_cat_map_column_slice: [f64; 4] = [2.0, 1.0, 1.0, 1.0];
@@ -75,7 +75,7 @@ fn test_arnold_cat_lya_spectra() {
     let mut arnold_cat_spectra = LyapunovSpectra::<2>::new();
 
     // Iteratively simulate for high steps 
-    for step in 1..ITERATION_STEPS {
+    for step in 1..simulation_steps {
         // Compute iteration's frame and update
         let new_frame: SMatrix<f64, 2, 2> = cat_map_matrix * arnold_cat_spectra.get_frame();
         arnold_cat_spectra.frame_from_slice(new_frame.as_slice(), FrameLayout::ColumnMajor);
@@ -87,8 +87,8 @@ fn test_arnold_cat_lya_spectra() {
     // Test
     let computed_spectra = arnold_cat_spectra.get_spectrum();
     let expected_spectra: [f64; 2] = [f64::ln(0.5* (3.0 + f64::sqrt(5.0))), f64::ln(0.5* (3.0 - f64::sqrt(5.0)))];
-    assert!((expected_spectra[0] - computed_spectra[0]).abs() < MARGIN_OF_ERROR, "Expected: {}, Actual: {}", expected_spectra[0], computed_spectra[0]);
-    assert!((expected_spectra[1] - computed_spectra[1]).abs() < MARGIN_OF_ERROR, "Expected: {}, Actual: {}", expected_spectra[1], computed_spectra[1]);
+    assert!((expected_spectra[0] - computed_spectra[0]).abs() < margin_of_error, "Expected: {}, Actual: {}", expected_spectra[0], computed_spectra[0]);
+    assert!((expected_spectra[1] - computed_spectra[1]).abs() < margin_of_error, "Expected: {}, Actual: {}", expected_spectra[1], computed_spectra[1]);
 }
 
 #[test]
@@ -97,18 +97,18 @@ fn test_random_trajectory_stays_in_box() {
     let config = test_config_default();
     let mut rng = StdRng::seed_from_u64(420);
     let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0], config);
-    let TEST_EPSILON: f32 = 1e-6;    // Stronger than PHYS_EPSILON
-    let STEPS = 1000;
+    let test_epsilon: f32 = 1e-6;    // Stronger than PHYS_EPSILON
+    let steps = 1000;
 
     // Run trajectory and check
-    for k in 0..STEPS {
+    for k in 0..steps {
         traj.update(1).unwrap();
         let p = traj.current_pos();
         let v = traj.current_vel();
         assert!(
-            p.x >= -TEST_EPSILON && p.x <= (config.box_size() + TEST_EPSILON) &&
-            p.y >= -TEST_EPSILON && p.y <= (config.box_size() + TEST_EPSILON) &&
-            p.z >= -TEST_EPSILON && p.z <= (config.box_size() + TEST_EPSILON),
+            p.x >= -test_epsilon && p.x <= (config.box_size() + test_epsilon) &&
+            p.y >= -test_epsilon && p.y <= (config.box_size() + test_epsilon) &&
+            p.z >= -test_epsilon && p.z <= (config.box_size() + test_epsilon),
             "Escaped box at step {}: pos={:?} vel={:?}", k, p, v
         );
     }
@@ -123,27 +123,27 @@ fn test_qualitative_trajectory_lya_spectra_properties() {
     let mut traj = random_trajectory(&mut rng, [1.0, 0.0, 0.0, 1.0], config);
 
     // Update trajectory
-    let STEPS = 20000;  // Recall Lyapunov exponents is an infinite limit so larger iteration steps are prefered
-    for k in 0..STEPS {traj.update(1).unwrap();}
+    let steps = 20000;  // Recall Lyapunov exponents is an infinite limit so larger iteration steps are prefered
+    for _k in 0..steps {traj.update(1).unwrap();}
 
     // Testing pairing symmetry
-    let MARGIN_OF_ERROR = 5e-4; // Should be enough for rendering purposes
+    let margin_of_error = 5e-4; // Should be enough for rendering purposes
     let spectra = traj.curr_lya_spectra();
     for k in 0..NUM_TANGENTS/2 {
         let pair_sum: f64 = spectra[k] + spectra[NUM_TANGENTS-1-k];
-        assert!(pair_sum.abs() < MARGIN_OF_ERROR,
+        assert!(pair_sum.abs() < margin_of_error,
                 "Pairing broken at index: {} with {} + {} = {}", k, spectra[k], spectra[NUM_TANGENTS-1-k], pair_sum);
         
     }
 
     // Testing spectra sum should converge to zero
     let spectra_sum: f64 = traj.curr_lya_spectra().iter().sum();
-    assert!(spectra_sum.abs() < MARGIN_OF_ERROR, "Lyapunov sum = {}", spectra_sum);
+    assert!(spectra_sum.abs() < margin_of_error, "Lyapunov sum = {}", spectra_sum);
 
     // Test that it is at least chaotic
     assert!(spectra[0] > 0.0, "This ain't chaotic! Leading exponent: {}", spectra[0]);
 
     // Test the middle exponents should be close to zero
-    assert!(spectra[2].abs() < MARGIN_OF_ERROR && spectra[3].abs() < MARGIN_OF_ERROR, 
+    assert!(spectra[2].abs() < margin_of_error && spectra[3].abs() < margin_of_error, 
             "Middle exponents not close to zero! Actual values: {} and {}", spectra[2], spectra[3]);
 }
